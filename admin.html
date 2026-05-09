@@ -1696,7 +1696,7 @@ function VueAdmin({entries, onRefresh, addLog}) {
 // APP PRINCIPALE
 // ═══════════════════════════════════════════════════════════
 function App() {
-  const [auth,setAuth] = React.useState(true);
+  const [auth,setAuth] = React.useState(false);
   const [view,setView] = React.useState('historique');
   const [editingId,setEditingId] = React.useState(null);
   const [entries,setEntries] = React.useState([]);
