@@ -1,0 +1,377 @@
+// ============================================================
+// ATELIERS NUMÉRIQUES CD47 — Google Apps Script v8.2
+// Nouveauté : getLists / saveLists — synchronisation
+//             des listes déroulantes entre Admin et Frontend
+// ============================================================
+
+const SHEET_NAME   = 'Ateliers';
+const CONFIG_SHEET = 'Config';
+const ADMIN_PWD    = 'administrateur';
+
+const COLUMNS = [
+  '_id', '_n', 'statut', 'date', 'horaire', 'ampm',
+  'orienteur', 'commune', 'lieu', 'thematique',
+  'inscrits', 'presents', 'public', 'conseiller',
+  'Videoprojecteur', 'Ecran', 'Classe mobile', 'Boitier 4G',
+  'Tablette', 'Scanner', 'Multiprise', 'Ordinateur',
+  'residence', 'remarques'
+];
+
+const MATERIELS = [
+  'Videoprojecteur', 'Ecran', 'Classe mobile', 'Boitier 4G',
+  'Tablette', 'Scanner', 'Multiprise', 'Ordinateur'
+];
+
+// Valeurs par défaut si aucune liste n'est encore sauvegardée
+const VISIBILITY_DEFAULTS = {
+  saisie:      true,
+  historique:  true,
+  graphiques:  false,
+  carte:       false,
+  bingo:       false
+};
+
+const LISTS_DEFAULTS = {
+  statuts:     ['Planifié','Réalisé','Annulé','Non réalisé','Reporté'],
+  conseillers: ['Cynthia Pineau','Corentin Tual','Michel Aswad','Eva Capelle'],
+  publics:     ['Tous publics','Personnes en situation de handicap','Jeunes','ATTEE',
+                'Classe - 6A','Classe - 6B','Classe - 6C','Classe - 6D',
+                'Elèves de 5è du collège','Parents isolés',
+                'Professionnels des bibliothèques','Adhérents','BRSA',
+                "Demandeur d'emploi",'Parents allophone','Collègiens','Autres'],
+  materiels:   ['Videoprojecteur','Ecran','Classe mobile','Boitier 4G',
+                'Tablette','Scanner','Multiprise','Ordinateur']
+};
+
+// ============================================================
+// POINT D'ENTRÉE HTTP
+// ============================================================
+
+function doGet(e)  { return handleRequest(e); }
+function doPost(e) { return handleRequest(e); }
+
+function handleRequest(e) {
+  if (!e) return jsonResponse({ ok: false, error: 'Appel direct non supporté' });
+
+  const params = e.parameter || {};
+  const body   = parseBody(e);
+
+  if (params.entry) {
+    try { body.entry = JSON.parse(decodeURIComponent(params.entry)); } catch(_) {}
+  }
+  if (params.entries) {
+    try { body.entries = JSON.parse(decodeURIComponent(params.entries)); } catch(_) {}
+  }
+  // ← NOUVEAU : listes transmises en GET param
+  if (params.lists) {
+    try { body.lists = JSON.parse(decodeURIComponent(params.lists)); } catch(_) {}
+  }
+  // ← NOUVEAU : visibilité transmise en GET param
+  if (params.visibility) {
+    try { body.visibility = JSON.parse(decodeURIComponent(params.visibility)); } catch(_) {}
+  }
+
+  const action = params.action || body.action || '';
+
+  try {
+    let result;
+    switch (action) {
+      case 'getAll':    result = getAll();                         break;
+      case 'save':      result = saveEntry(body.entry);            break;
+      case 'saveMany':  result = saveManyEntries(body.entries);    break;
+      case 'delete':    result = deleteEntry(body._id);            break;
+      case 'getConfig': result = getConfig();                      break;
+      case 'setConfig': result = setConfig(body.key, body.value);  break;
+      // ── NOUVEAUX ──────────────────────────────────────────
+      case 'getLists':      result = getLists();                       break;
+      case 'saveLists':     result = saveLists(body.lists);            break;
+      case 'getVisibility': result = getVisibility();                  break;
+      case 'saveVisibility':result = saveVisibility(body.visibility);  break;
+      // ──────────────────────────────────────────────────────
+      default:          result = { ok: false, error: 'Action inconnue : ' + action };
+    }
+    return jsonResponse(result);
+  } catch (err) {
+    return jsonResponse({ ok: false, error: err.message });
+  }
+}
+
+// ============================================================
+// LECTURE — getAll retourne aussi les listes
+// ============================================================
+
+function getAll() {
+  const sheet = getSheet(SHEET_NAME);
+  const data  = sheet.getDataRange().getValues();
+
+  const entries = [];
+  if (data.length > 1) {
+    const headers = data[0];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row[0]) continue;
+      const ent = {};
+      headers.forEach((h, idx) => {
+        ent[h] = row[idx] === undefined ? '' : row[idx];
+      });
+      ent.materiel = MATERIELS.filter(m => ent[m] === 'OUI');
+      if (ent.date instanceof Date) {
+        ent.date = Utilities.formatDate(ent.date, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+      } else if (ent.date) {
+        ent.date = String(ent.date).slice(0, 10);
+      }
+      // Normaliser l'horaire : Sheets peut renvoyer un objet Date ou un timestamp ISO
+      if (ent.horaire instanceof Date) {
+        ent.horaire = Utilities.formatDate(ent.horaire, Session.getScriptTimeZone(), 'HH:mm');
+      } else if (ent.horaire) {
+        const h = String(ent.horaire).trim();
+        const m = h.match(/T(\d{2}:\d{2})/);
+        if (m) ent.horaire = m[1];
+        else if (/^\d{1,2}:\d{2}:\d{2}$/.test(h)) ent.horaire = h.slice(0,5);
+      }
+      entries.push(ent);
+    }
+  }
+
+  // ← Inclure les listes dans la réponse getAll
+  //   → le frontend n'a besoin que d'UN seul appel réseau au démarrage
+  const lists = getLists().lists;
+
+  const visibility = getVisibility().visibility;
+  return { ok: true, entries, lists, visibility };
+}
+
+// ============================================================
+// LISTES DÉROULANTES
+// ============================================================
+
+/**
+ * Lit les listes depuis la feuille Config (clé "lists").
+ * Retourne les valeurs par défaut si rien n'est encore sauvegardé.
+ */
+function getLists() {
+  try {
+    const sheet = getSheet(CONFIG_SHEET);
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0] === 'lists') {
+        const parsed = JSON.parse(String(data[i][1]));
+        // Fusionner avec les defaults pour garantir toutes les clés
+        return { ok: true, lists: Object.assign({}, LISTS_DEFAULTS, parsed) };
+      }
+    }
+  } catch(_) {}
+  // Pas encore de listes sauvegardées → defaults
+  return { ok: true, lists: Object.assign({}, LISTS_DEFAULTS) };
+}
+
+/**
+ * Sauvegarde les listes dans Config (clé "lists").
+ * Appelé par l'admin depuis backend_admin.html.
+ */
+function saveLists(lists) {
+  if (!lists || typeof lists !== 'object') {
+    return { ok: false, error: 'Listes invalides' };
+  }
+  // Valider la structure minimale
+  const required = ['statuts','conseillers','publics','materiels'];
+  for (const k of required) {
+    if (!Array.isArray(lists[k])) {
+      return { ok: false, error: `Clé manquante ou invalide : ${k}` };
+    }
+  }
+  return setConfig('lists', JSON.stringify(lists));
+}
+
+// ============================================================
+// VISIBILITÉ FRONTEND
+// ============================================================
+
+function getVisibility() {
+  try {
+    const sheet = getSheet(CONFIG_SHEET);
+    const data  = sheet.getDataRange().getValues();
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0] === 'frontend_visibility') {
+        const parsed = JSON.parse(String(data[i][1]));
+        return { ok: true, visibility: Object.assign({}, VISIBILITY_DEFAULTS, parsed) };
+      }
+    }
+  } catch(_) {}
+  return { ok: true, visibility: Object.assign({}, VISIBILITY_DEFAULTS) };
+}
+
+function saveVisibility(visibility) {
+  if (!visibility || typeof visibility !== 'object') {
+    return { ok: false, error: 'Visibilité invalide' };
+  }
+  return setConfig('frontend_visibility', JSON.stringify(visibility));
+}
+
+// ============================================================
+// ÉCRITURE — UPSERT
+// ============================================================
+
+function saveEntry(entry) {
+  if (!entry || !entry._id) return { ok: false, error: 'Entrée invalide (pas de _id)' };
+
+  const sheet = getSheet(SHEET_NAME);
+  const data  = sheet.getDataRange().getValues();
+  const headers = data.length > 0 ? data[0] : COLUMNS;
+
+  let rowIndex = -1;
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(entry._id).trim()) {
+      rowIndex = i + 1;
+      break;
+    }
+  }
+
+  if (!entry._n || entry._n === 0) {
+    entry._n = getNextN(data);
+  }
+
+  const row = buildRow(entry, headers);
+
+  if (rowIndex > 0) {
+    sheet.getRange(rowIndex, 1, 1, row.length).setValues([row]);
+  } else {
+    sheet.appendRow(row);
+  }
+
+  return { ok: true, _id: entry._id, _n: entry._n };
+}
+
+function saveManyEntries(entries) {
+  if (!Array.isArray(entries) || entries.length === 0) {
+    return { ok: false, error: 'Pas d\'entrées à importer' };
+  }
+  let saved = 0;
+  for (const entry of entries) {
+    try { saveEntry(entry); saved++; } catch(_) {}
+  }
+  return { ok: true, saved };
+}
+
+// ============================================================
+// SUPPRESSION
+// ============================================================
+
+function deleteEntry(_id) {
+  if (!_id) return { ok: false, error: 'Pas de _id fourni' };
+
+  const sheet = getSheet(SHEET_NAME);
+  const data  = sheet.getDataRange().getValues();
+
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][0]).trim() === String(_id).trim()) {
+      sheet.deleteRow(i + 1);
+      return { ok: true };
+    }
+  }
+  return { ok: false, error: 'Entrée non trouvée' };
+}
+
+// ============================================================
+// CONFIG
+// ============================================================
+
+function getConfig() {
+  const sheet = getSheet(CONFIG_SHEET);
+  const data  = sheet.getDataRange().getValues();
+  const config = {};
+  data.forEach(row => { if (row[0]) config[row[0]] = row[1]; });
+  return { ok: true, config };
+}
+
+function setConfig(key, value) {
+  if (!key) return { ok: false, error: 'Clé manquante' };
+  const sheet = getSheet(CONFIG_SHEET);
+  const data  = sheet.getDataRange().getValues();
+  for (let i = 0; i < data.length; i++) {
+    if (data[i][0] === key) {
+      sheet.getRange(i + 1, 2).setValue(value);
+      return { ok: true };
+    }
+  }
+  sheet.appendRow([key, value]);
+  return { ok: true };
+}
+
+// ============================================================
+// UTILITAIRES
+// ============================================================
+
+function getSheet(name) {
+  const ss    = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(name);
+  if (!sheet) throw new Error('Feuille introuvable : ' + name);
+  return sheet;
+}
+
+function buildRow(entry, headers) {
+  return headers.map(h => {
+    if (MATERIELS.includes(h)) {
+      return (Array.isArray(entry.materiel) && entry.materiel.includes(h)) ? 'OUI' : '';
+    }
+    const v = entry[h];
+    return v === undefined || v === null ? '' : v;
+  });
+}
+
+function getNextN(data) {
+  let max = 0;
+  for (let i = 1; i < data.length; i++) {
+    const n = parseInt(data[i][1]);
+    if (!isNaN(n) && n > max) max = n;
+  }
+  return max + 1;
+}
+
+function parseBody(e) {
+  try {
+    if (e.postData && e.postData.contents) {
+      return JSON.parse(e.postData.contents);
+    }
+  } catch(_) {}
+  return e.parameter || {};
+}
+
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================================
+// INITIALISATION — À exécuter UNE seule fois depuis l'éditeur
+// ============================================================
+
+function initSheets() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  let ateliers = ss.getSheetByName(SHEET_NAME);
+  if (!ateliers) ateliers = ss.insertSheet(SHEET_NAME);
+  if (ateliers.getLastRow() === 0) {
+    ateliers.appendRow(COLUMNS);
+    ateliers.getRange(1, 1, 1, COLUMNS.length)
+      .setFontWeight('bold')
+      .setBackground('#1e3a8a')
+      .setFontColor('#ffffff');
+    ateliers.setFrozenRows(1);
+  }
+
+  let config = ss.getSheetByName(CONFIG_SHEET);
+  if (!config) config = ss.insertSheet(CONFIG_SHEET);
+  if (config.getLastRow() === 0) {
+    config.getRange(1, 1, 4, 2).setValues([
+      ['app_version',    '8.2'],
+      ['last_import',    ''],
+      ['total_objectif', '200'],
+      ['lists',          JSON.stringify(LISTS_DEFAULTS)],
+      ['frontend_visibility', JSON.stringify(VISIBILITY_DEFAULTS)]
+    ]);
+  }
+
+  SpreadsheetApp.getUi().alert('✅ Feuilles initialisées avec succès (v8.2) !');
+}

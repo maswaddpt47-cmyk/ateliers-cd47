@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ateliers CD47 — Admin v8.2</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a202c;font-size:14px}
+nav{background:#1e3a8a;color:#fff;padding:0 20px;display:flex;align-items:center;justify-content:center;gap:4px;height:52px;box-shadow:0 2px 8px rgba(0,0,0,.2);position:sticky;top:0;z-index:100}
+nav .logo{font-weight:700;font-size:16px;margin-right:16px;white-space:nowrap}
+nav .admin-badge{background:#dc2626;color:#fff;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;margin-left:4px}
+nav button{background:none;border:none;color:rgba(255,255,255,.75);padding:6px 12px;border-radius:6px;cursor:pointer;font-size:13px;transition:all .2s}
+nav button:hover{background:rgba(255,255,255,.15);color:#fff}
+nav button.active{background:rgba(255,255,255,.2);color:#fff;font-weight:600}
+nav button.notif{background:#dc2626;color:#fff;font-weight:700;animation:pulse 1.5s infinite}
+nav button.notif:hover{background:#b91c1c}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.notif-badge{display:inline-block;background:#fbbf24;color:#1a202c;font-size:10px;font-weight:800;padding:1px 5px;border-radius:10px;margin-left:5px;vertical-align:middle}
+.main{padding:20px;max-width:1200px;margin:0 auto}
+.card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:16px}
+.card h2{font-size:16px;font-weight:600;color:#1e3a8a;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #e2e8f0}
+label{display:block;font-size:12px;font-weight:600;color:#4a5568;margin-bottom:4px;margin-top:12px}
+input,select,textarea{width:100%;padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;color:#1a202c;background:#fff;transition:border .2s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:#1e3a8a}
+input.err,select.err{border-color:#e53e3e}
+.err-msg{color:#e53e3e;font-size:11px;margin-top:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.btn{padding:8px 18px;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:600;transition:all .2s}
+.btn-primary{background:#1e3a8a;color:#fff}.btn-primary:hover{background:#1e40af}
+.btn-secondary{background:#e2e8f0;color:#4a5568}.btn-secondary:hover{background:#cbd5e0}
+.btn-danger{background:#dc2626;color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-warn{background:#d97706;color:#fff}.btn-warn:hover{background:#b45309}
+.btn-sm{padding:4px 10px;font-size:12px}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-realise{background:#c6f6d5;color:#276749}
+.badge-planifie{background:#bee3f8;color:#2a69ac}
+.badge-annule{background:#fed7d7;color:#9b2c2c}
+.badge-reporte{background:#fefcbf;color:#744210}
+.badge-nonrealise{background:#e2e8f0;color:#4a5568}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f7fafc;padding:8px 10px;text-align:left;font-weight:600;color:#4a5568;border-bottom:2px solid #e2e8f0;white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{background:#edf2f7}
+td{padding:8px 10px;border-bottom:1px solid #f0f4f8;vertical-align:middle}
+tr:hover td{background:#f7fafc}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:16px}
+.filters .f-group{display:flex;flex-direction:column;min-width:140px}
+.filters .f-group label{margin-top:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.kpi{background:#fff;border-radius:10px;padding:16px 20px;box-shadow:0 1px 4px rgba(0,0,0,.08);text-align:center}
+.kpi .val{font-size:32px;font-weight:700;color:#1e3a8a}
+.kpi .lbl{font-size:12px;color:#718096;margin-top:4px}
+#map-container{height:480px;border-radius:8px;overflow:hidden}
+.toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:8px;font-weight:600;font-size:13px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,.15);transition:opacity .3s}
+.toast-ok{background:#276749;color:#fff}
+.toast-err{background:#9b2c2c;color:#fff}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blink-retard{0%,100%{opacity:1}50%{opacity:.45}}
+.loading-full{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;color:#718096;gap:12px}
+.loading-full .big-spin{width:40px;height:40px;border:4px solid #e2e8f0;border-top-color:#1e3a8a;border-radius:50%;animation:spin .8s linear infinite}
+.mat-checks{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.mat-checks label{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:400;color:#4a5568;margin-top:0;cursor:pointer}
+.mat-checks input{width:auto}
+.pagination{display:flex;align-items:center;gap:8px;margin-top:12px;justify-content:flex-end}
+.pagination button{padding:4px 10px;border:1.5px solid #e2e8f0;border-radius:4px;background:#fff;cursor:pointer;font-size:12px}
+.pagination button:disabled{opacity:.4;cursor:default}
+.pagination span{font-size:12px;color:#718096}
+.error-box{background:#fff5f5;border:1.5px solid #fc8181;border-radius:8px;padding:16px;color:#9b2c2c;display:flex;flex-direction:column;gap:10px;align-items:flex-start}
+.admin-section{border:2px solid #fca5a5;border-radius:10px;padding:20px;margin-bottom:16px;background:#fff}
+.admin-section h3{font-size:15px;font-weight:700;color:#dc2626;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.confirm-box{background:#fff5f5;border:1.5px solid #fc8181;border-radius:8px;padding:14px;margin-top:12px}
+.confirm-box p{font-size:13px;color:#9b2c2c;margin-bottom:10px}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 52px)}
+.login-card{background:#fff;border-radius:12px;padding:36px 40px;box-shadow:0 4px 20px rgba(0,0,0,.1);width:340px;text-align:center}
+.login-card h2{color:#1e3a8a;margin-bottom:24px;font-size:20px}
+.login-card input{margin-top:8px;margin-bottom:16px}
+.log-entry{padding:8px 12px;border-radius:6px;font-size:12px;margin-bottom:6px;display:flex;gap:10px}
+.log-ok{background:#f0fff4;border-left:3px solid #276749}
+.log-err{background:#fff5f5;border-left:3px solid #dc2626}
+.log-info{background:#ebf8ff;border-left:3px solid #2a69ac}
+.log-time{color:#a0aec0;white-space:nowrap}
+.progress-bar{height:8px;background:#e2e8f0;border-radius:4px;overflow:hidden;margin-top:8px}
+.progress-fill{height:100%;background:#1e3a8a;border-radius:4px;transition:width .3s}
+/* ── Modal Listes ── */
+.listes-overlay{position:fixed;inset:0;background:rgba(15,23,42,.55);z-index:800;display:flex;align-items:center;justify-content:center;padding:16px}
+.listes-modal{background:#fff;border-radius:14px;width:580px;max-width:100%;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.25);overflow:hidden}
+.listes-header{background:#1e3a8a;color:#fff;padding:18px 22px 14px;flex-shrink:0}
+.listes-header h2{font-size:17px;font-weight:700;margin-bottom:2px}
+.listes-header p{font-size:12px;opacity:.75}
+.listes-close{position:absolute;top:14px;right:16px;background:rgba(255,255,255,.2);border:none;color:#fff;width:28px;height:28px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:background .2s}
+.listes-close:hover{background:rgba(255,255,255,.35)}
+.listes-tabs{display:flex;border-bottom:2px solid #e2e8f0;padding:0 22px;background:#f8fafc;flex-shrink:0;overflow-x:auto}
+.listes-tab{padding:10px 14px;font-size:13px;font-weight:600;color:#718096;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .15s}
+.listes-tab:hover{color:#1e3a8a}
+.listes-tab.active{color:#1e3a8a;border-bottom-color:#1e3a8a}
+.listes-tab .tab-count{display:inline-block;background:#e2e8f0;color:#4a5568;font-size:10px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:5px}
+.listes-tab.active .tab-count{background:#1e3a8a22;color:#1e3a8a}
+.listes-body{flex:1;overflow-y:auto;padding:16px 22px}
+.listes-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;border:1px solid #e2e8f0;margin-bottom:7px;background:#fff;transition:box-shadow .15s}
+.listes-item:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.listes-arrows{display:flex;flex-direction:column;gap:2px;flex-shrink:0}
+.listes-arrows button{background:none;border:1px solid #e2e8f0;border-radius:3px;width:18px;height:14px;cursor:pointer;font-size:9px;color:#718096;display:flex;align-items:center;justify-content:center;padding:0;transition:all .1s;line-height:1}
+.listes-arrows button:hover:not(:disabled){background:#f0f4f8;color:#1e3a8a}
+.listes-arrows button:disabled{opacity:.3;cursor:default}
+.listes-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.listes-name{flex:1;font-size:13px;font-weight:500;color:#1a202c}
+.listes-name input{border:1.5px solid #1e3a8a;border-radius:5px;padding:3px 7px;font-size:13px;width:100%;outline:none}
+.listes-actions{display:flex;gap:5px;flex-shrink:0}
+.listes-add-row{display:flex;gap:8px;margin-top:14px}
+.listes-add-row input{flex:1;padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:7px;font-size:13px;outline:none;transition:border .2s}
+.listes-add-row input:focus{border-color:#1e3a8a}
+.listes-footer{padding:14px 22px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;background:#f8fafc;flex-shrink:0}
+
+.combo-wrap{position:relative}
+.combo-dropdown{position:absolute;top:100%;left:0;right:0;background:#fff;border:1.5px solid #1e3a8a;border-top:none;border-radius:0 0 6px 6px;max-height:240px;overflow-y:auto;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,.1)}
+.combo-item{display:flex;align-items:center;gap:10px;padding:7px 12px;cursor:pointer;font-size:13px;transition:background .1s}
+.combo-item:hover,.combo-item.active{background:#eff6ff}
+.combo-cp{font-size:11px;font-weight:700;color:#1e3a8a;min-width:42px;font-family:monospace}
+.combo-nom{color:#1a202c}
+.combo-empty{padding:10px 12px;color:#718096;font-size:12px;font-style:italic}
+.combo-loading{padding:10px 12px;color:#1e3a8a;font-size:12px;display:flex;align-items:center;gap:8px}
+/* ── Bingo ── */
+.bingo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:20px}
+.bingo-card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);padding:16px 12px;text-align:center;cursor:pointer;transition:all .2s;border:2px solid transparent}
+.bingo-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.14);transform:translateY(-2px)}
+.bingo-card.selected{border-color:#1e3a8a}
+.bingo-circle{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:22px;font-weight:800;border:3px solid}
+.bingo-nom{font-size:11px;font-weight:700;color:#1a202c;margin-bottom:4px;line-height:1.2}
+.bingo-pct{font-size:11px;color:#718096}
+.bingo-list{margin-top:16px}
+.bingo-list-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid #f0f4f8;font-size:13px}
+.bingo-list-item:last-child{border-bottom:none}
+.bingo-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.bingo-list-date{color:#718096;font-size:12px;min-width:80px}
+.bingo-list-theme{flex:1;color:#1a202c;font-weight:500}
+.bingo-list-badge{padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+/* ── Print ── */
+@media print{nav{display:none!important}.main{padding:0!important}.btn{display:none!important}.filters{display:none!important}.side-panel{display:none!important}}
+.btn-print{background:#f8fafc;color:#4a5568;border:1.5px solid #e2e8f0}.btn-print:hover{background:#e2e8f0}
+
+.badge-retard{background:#fecaca;color:#991b1b;border:1px solid #f87171;animation:blink-retard 1.4s ease-in-out infinite}
+.atelier-card{background:#fff;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:10px;display:flex;overflow:hidden;transition:box-shadow .2s;cursor:pointer}
+.atelier-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.atelier-card-border{width:5px;flex-shrink:0}
+.atelier-card-date{width:64px;flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px 8px;background:#f8fafc;border-right:1px solid #e2e8f0}
+.atelier-card-day{font-size:26px;font-weight:800;color:#1a202c;line-height:1}
+.atelier-card-month{font-size:11px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.05em}
+.atelier-card-time{font-size:12px;color:#4a5568;margin-top:4px;font-weight:600}
+.atelier-card-jour{font-size:10px;font-weight:700;color:#718096;text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+.atelier-card-body{flex:1;padding:12px 14px;min-width:0}
+.atelier-card-badges{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:6px;align-items:center}
+.atelier-card-conseiller{font-size:12px;font-weight:700;margin-bottom:3px}
+.atelier-card-title{font-size:14px;font-weight:700;color:#1a202c;line-height:1.3;margin-bottom:4px}
+.atelier-card-sub{font-size:12px;color:#718096}
+.atelier-card-arrow{display:flex;align-items:center;padding:0 10px;color:#cbd5e0;font-size:18px}
+.badge-pill{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.bp-planifie{background:#dbeafe;color:#1d4ed8}
+.bp-realise{background:#dcfce7;color:#166534}
+.bp-annule{background:#fee2e2;color:#991b1b}
+.bp-reporte{background:#fef3c7;color:#92400e}
+.bp-nonrealise{background:#f1f5f9;color:#475569}
+.bp-retard{background:#fecaca;color:#991b1b;border:1px solid #f87171;animation:blink-retard 1.4s ease-in-out infinite}
+.bp-public{background:#f1f5f9;color:#475569}
+.side-panel{position:fixed;top:0;right:0;width:320px;max-width:95vw;height:100vh;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,.15);z-index:500;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s ease}
+.side-panel.open{transform:translateX(0)}
+.side-panel-header{padding:16px 20px;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;background:#f8fafc}
+.side-panel-header h3{font-size:14px;font-weight:700;color:#1a202c;margin:0}
+.side-panel-body{flex:1;overflow-y:auto;padding:16px 20px}
+.side-panel-footer{padding:12px 20px;border-top:1px solid #e2e8f0;display:flex;gap:8px}
+.side-panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:499}
+.sp-info-row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f4f8;font-size:13px}
+.sp-info-row span:first-child{color:#718096}
+.sp-info-row span:last-child{font-weight:600;color:#1a202c;text-align:right;max-width:60%}
+.mat-chip{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;background:#e2e8f0;color:#4a5568;margin:2px}
+.chip-bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;border:1.5px solid transparent;cursor:pointer;background:#f0f4f8;color:#4a5568;transition:all .15s}
+.chip.active{border-color:currentColor}
+.chip-all.active{background:#1e3a8a22;color:#1e3a8a}
+.chip-planifie.active{background:#dbeafe;color:#1d4ed8}
+.chip-realise.active{background:#dcfce7;color:#166534}
+.chip-annule.active{background:#fee2e2;color:#991b1b}
+.chip-reporte.active{background:#fef3c7;color:#92400e}
+.chip-nonrealise.active{background:#f1f5f9;color:#475569}
+.chip-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0}
+.kpi-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.kpi-mini{flex:1;min-width:60px;background:#fff;border-radius:8px;padding:10px 8px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kpi-mini .v{font-size:22px;font-weight:800;line-height:1}
+.kpi-mini .l{font-size:10px;color:#718096;margin-top:2px}
+.kpi-mini .p{font-size:10px;font-weight:600;margin-top:1px}
+.sp-field{margin-bottom:14px}
+.sp-field label{font-size:11px;font-weight:700;color:#718096;display:block;margin-bottom:4px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── Toggle switch visibilité ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:11px 0;border-bottom:1px solid #f0f4f8}
+.toggle-row:last-child{border-bottom:none}
+.toggle-label{font-size:13px;font-weight:600;color:#1a202c}
+.toggle-sub{font-size:11px;color:#718096;margin-top:2px}
+.tgl{position:relative;display:inline-block;width:44px;height:24px;flex-shrink:0}
+.tgl input{opacity:0;width:0;height:0;position:absolute}
+.tgl-track{position:absolute;inset:0;background:#cbd5e0;border-radius:24px;cursor:pointer;transition:background .2s}
+.tgl-track:before{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .2s;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.tgl input:checked+.tgl-track{background:#1e3a8a}
+.tgl input:checked+.tgl-track:before{transform:translateX(20px)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const GS_URL = 'https://script.google.com/macros/s/AKfycbxJm14YFVz861rHnnENPTQoJrsCeChkXokxrq2vKZZBzmLKP6ys8NYuPjN92NIia9QoVA/exec';
+const ADMIN_PWD = 'administrateur';
+
+const COMMUNES = [
+  'AGEN','ARGENTON','ASTAFFORT','CASSENEUIL','CASTELMORON SUR LOT',
+  'FAUILLET','FIEUX','FUMEL','LAVARDAC','LAYRAC',
+  'LE TEMPLE SUR LOT','MONCLAR','NERAC','Ste-Bazeille',
+  "Saint Pardoux d'Isaac",'TONNEINS',"TOURNONS D'AGENAIS",'VILLENEUVE SUR LOT'
+];
+const COMMUNES_GPS = {
+  'AGEN':{lat:44.2004,lng:0.6213},'ARGENTON':{lat:44.3167,lng:0.7833},
+  'ASTAFFORT':{lat:44.0447,lng:0.6586},'CASSENEUIL':{lat:44.3614,lng:0.6667},
+  'CASTELMORON SUR LOT':{lat:44.3961,lng:0.4944},'FAUILLET':{lat:44.3833,lng:0.3167},
+  'FIEUX':{lat:44.1500,lng:0.8167},'FUMEL':{lat:44.4967,lng:0.9700},
+  'LAVARDAC':{lat:44.1806,lng:0.2958},'LAYRAC':{lat:44.1347,lng:0.6625},
+  'LE TEMPLE SUR LOT':{lat:44.3833,lng:0.5333},'MONCLAR':{lat:44.2167,lng:0.5833},
+  'NERAC':{lat:44.1381,lng:0.3394},'Ste-Bazeille':{lat:44.3667,lng:0.1833},
+  "Saint Pardoux d'Isaac":{lat:44.4000,lng:0.2167},'TONNEINS':{lat:44.3906,lng:0.3044},
+  "TOURNONS D'AGENAIS":{lat:44.3833,lng:0.9667},'VILLENEUVE SUR LOT':{lat:44.4089,lng:0.7053}
+};
+const CONSEILLERS_DEFAULT = ['Cynthia Pineau','Corentin Tual','Michel Aswad','Eva Capelle'];
+const STATUTS_DEFAULT = ['Planifié','Réalisé','Annulé','Non réalisé','Reporté'];
+const PUBLICS_DEFAULT = ['Tous publics','Personnes en situation de handicap','Jeunes','ATTEE',
+  'Classe - 6A','Classe - 6B','Classe - 6C','Classe - 6D','Elèves de 5è du collège',
+  'Parents isolés','Professionnels des bibliothèques','Adhérents','BRSA',
+  "Demandeur d'emploi",'Parents allophone','Collègiens','Autres'];
+const MATERIELS_DEFAULT = ['Videoprojecteur','Ecran','Classe mobile','Boitier 4G','Tablette','Scanner','Multiprise','Ordinateur'];
+// Aliases rétrocompatibles (utilisés dans le reste du code)
+let STATUTS = [...STATUTS_DEFAULT];
+let CONSEILLERS = [...CONSEILLERS_DEFAULT];
+let PUBLICS = [...PUBLICS_DEFAULT];
+let MATERIELS = [...MATERIELS_DEFAULT];
+// Cache communes 47 (API geo.api.gouv.fr)
+let COMMUNES_47_CACHE = null;
+async function loadCommunes47() {
+  if (COMMUNES_47_CACHE) return COMMUNES_47_CACHE;
+  try {
+    const res = await Promise.race([
+      fetch('https://geo.api.gouv.fr/departements/47/communes?fields=nom,codesPostaux&format=json'),
+      new Promise((_,r) => setTimeout(() => r(new Error('timeout')), 8000))
+    ]);
+    const data = await res.json();
+    const result = [];
+    data.forEach(c => { (c.codesPostaux||[]).forEach(cp => { result.push({cp, nom: c.nom.toUpperCase()}); }); });
+    result.sort((a,b) => a.nom.localeCompare(b.nom));
+    COMMUNES_47_CACHE = result;
+    return result;
+  } catch(e) {
+    console.warn('API communes 47 indisponible, fallback', e);
+    COMMUNES_47_CACHE = COMMUNES.map(nom => ({cp:'47???', nom}));
+    return COMMUNES_47_CACHE;
+  }
+}
+
+
+// Normaliser commune depuis CSV
+const COMMUNE_MAP = {
+  'TEMPLE SUR LOT':'LE TEMPLE SUR LOT',
+  'VILLENEUVE-SUR-LOT':'VILLENEUVE SUR LOT',
+  'LE TEMPLE SUR LOT':'LE TEMPLE SUR LOT',
+  'VILLENEUVE SUR LOT':'VILLENEUVE SUR LOT'
+};
+function normalizeCommune(c) { return COMMUNE_MAP[String(c||'').trim()] || String(c||'').trim(); }
+
+const CE = React.createElement;
+
+const CONSEILLER_COLORS={'Cynthia Pineau':'#7C3AED','Corentin Tual':'#2563EB','Michel Aswad':'#059669','Eva Capelle':'#DB2777'};
+function conseillerColor(c){return CONSEILLER_COLORS[c]||'#6B7280';}
+const MOIS=['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+function fmtCardDate(d){if(!d)return{day:'',month:'',jour:''};const[y,m,j]=d.split('-');const jour=JOURS[new Date(parseInt(y),parseInt(m)-1,parseInt(j)).getDay()];return{day:j,month:MOIS[parseInt(m)-1],jour};}
+function badgePill(statut,retard){
+  if(retard) return CE('span',{className:'badge-pill bp-retard'},'⚠ À mettre à jour');
+  const cls={'Planifié':'bp-planifie','Réalisé':'bp-realise','Annulé':'bp-annule','Reporté':'bp-reporte','Non réalisé':'bp-nonrealise'}[statut]||'bp-nonrealise';
+  return CE('span',{className:'badge-pill '+cls},statut);
+}
+
+let toastTimer;
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.className = `toast ${ok?'toast-ok':'toast-err'}`;
+  t.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ t.style.opacity='0'; }, 3500);
+}
+
+const badgeClass = s => {
+  if (s==='Réalisé') return 'badge-realise';
+  if (s==='Planifié') return 'badge-planifie';
+  if (s==='Annulé') return 'badge-annule';
+  if (s==='Reporté') return 'badge-reporte';
+  return 'badge-nonrealise';
+};
+const isPasse = e => e.date < new Date().toISOString().slice(0,10) && e.statut==='Réalisé';
+const isRetard = e => e.statut==='Planifié' && e.date < new Date().toISOString().slice(0,10);
+const JOURS = ['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'];
+const fmtDate = d => {
+  if (!d) return '';
+  const [y,m,j] = d.split('-');
+  const jour = JOURS[new Date(y,m-1,j).getDay()];
+  return `${jour} ${j}/${m}/${y}`;
+};
+const genId = () => `atelier_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+
+function normalizeDate(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.split('T')[0];
+  const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return s;
+}
+function normalizeHoraire(val) {
+  if (!val) return '';
+  const s = String(val).trim();
+  // Cas : timestamp ISO "2025-01-01T14:30:00.000Z" ou "T19:28:39.000Z"
+  const isoMatch = s.match(/T(\d{2}:\d{2})/);
+  if (isoMatch) return isoMatch[1];
+  // Cas : "14H30" ou "14h30"
+  if (/^\d{1,2}[Hh]\d{2}$/.test(s)) return s.replace(/[Hh]/,':');
+  // Cas : "14:30:00" → garder HH:MM
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(s)) return s.slice(0,5);
+  return s;
+}
+// Supprime les accents pour la recherche insensible aux accents
+function stripAccents(str) {
+  return String(str||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+}
+
+
+// ── API calls ─────────────────────────────────────────────
+async function apiFetch(action, body={}) {
+  // Toujours en GET avec paramètres URL pour éviter le blocage CORS (file:// + GAS)
+  const params = new URLSearchParams({ action });
+  if (body && Object.keys(body).length) {
+    Object.entries(body).forEach(([k, v]) => {
+      params.set(k, typeof v === 'object' ? JSON.stringify(v) : v);
+    });
+  }
+  const res = await Promise.race([
+    fetch(`${GS_URL}?${params.toString()}`),
+    new Promise((_,r)=>setTimeout(()=>r(new Error('Délai dépassé (10s)')),10000))
+  ]);
+  return res.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPOSANT COMBO COMMUNE
+// ═══════════════════════════════════════════════════════════
+function ComboCommune({value, onChange, hasError}) {
+  const [inputVal, setInputVal] = React.useState(value || '');
+  const [open, setOpen] = React.useState(false);
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const [communes, setCommunes] = React.useState(COMMUNES_47_CACHE || []);
+  const [apiLoading, setApiLoading] = React.useState(false);
+  const wrapRef = React.useRef(null);
+
+  React.useEffect(() => { setInputVal(value || ''); }, [value]);
+
+  React.useEffect(() => {
+    if (!COMMUNES_47_CACHE) {
+      setApiLoading(true);
+      loadCommunes47().then(data => { setCommunes(data); setApiLoading(false); }).catch(() => setApiLoading(false));
+    } else {
+      setCommunes(COMMUNES_47_CACHE);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    function handleClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const suggestions = React.useMemo(() => {
+    const q = inputVal.trim();
+    if (!q || q.length < 2) return [];
+    const qs = stripAccents(q); return communes.filter(c => c.cp.startsWith(q) || stripAccents(c.nom).includes(qs)).slice(0, 50);
+  }, [inputVal, communes]);
+
+  function selectItem(item) {
+    const display = item.nom + ' (' + item.cp + ')';
+    setInputVal(display);
+    onChange(display);
+    setOpen(false);
+    setActiveIdx(0);
+  }
+
+  function handleKeyDown(e) {
+    if (!open || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i+1, suggestions.length-1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i-1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (suggestions[activeIdx]) selectItem(suggestions[activeIdx]); }
+    else if (e.key === 'Escape') setOpen(false);
+  }
+
+  return CE('div', { className: 'combo-wrap', ref: wrapRef },
+    CE('input', {
+      type: 'text',
+      value: inputVal,
+      placeholder: apiLoading ? 'Chargement communes…' : 'Code postal ou commune…',
+      className: hasError ? 'err' : '',
+      autoComplete: 'off',
+      disabled: apiLoading,
+      onChange: e => { setInputVal(e.target.value); setOpen(true); setActiveIdx(0); if (!e.target.value) onChange(''); },
+      onFocus: () => { if (inputVal.trim().length >= 2) setOpen(true); },
+      onKeyDown: handleKeyDown
+    }),
+    apiLoading && CE('div', { className: 'combo-dropdown' },
+      CE('div', { className: 'combo-loading' },
+        CE('span', { className: 'spinner', style: { borderTopColor: '#1e3a8a', borderColor: '#e2e8f0', marginRight: 8 } }),
+        'Chargement des communes…'
+      )
+    ),
+    !apiLoading && open && suggestions.length > 0 && CE('div', { className: 'combo-dropdown' },
+      suggestions.map((item, i) =>
+        CE('div', {
+          key: item.cp + '-' + item.nom + '-' + i,
+          className: 'combo-item' + (i === activeIdx ? ' active' : ''),
+          onMouseDown: e => { e.preventDefault(); selectItem(item); },
+          onMouseEnter: () => setActiveIdx(i)
+        },
+          CE('span', { className: 'combo-cp' }, item.cp),
+          CE('span', { className: 'combo-nom' }, item.nom)
+        )
+      )
+    ),
+    !apiLoading && open && inputVal.trim().length >= 2 && suggestions.length === 0 &&
+      CE('div', { className: 'combo-dropdown' },
+        CE('div', { className: 'combo-empty' }, 'Aucune commune trouvée')
+      )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// COMPOSANT COMBO ORIENTEUR
+// ═══════════════════════════════════════════════════════════
+function ComboOrienteur({value, onChange, entries, hasError}) {
+  const [inputVal, setInputVal] = React.useState(value || '');
+  const [open, setOpen] = React.useState(false);
+  const [activeIdx, setActiveIdx] = React.useState(0);
+  const wrapRef = React.useRef(null);
+
+  React.useEffect(() => { setInputVal(value || ''); }, [value]);
+
+  React.useEffect(() => {
+    function handleClick(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  // Construire la liste unique des orienteurs depuis les entries
+  const orienteurs = React.useMemo(() => {
+    const set = new Set();
+    (entries || []).forEach(e => { if (e.orienteur && e.orienteur.trim()) set.add(e.orienteur.trim()); });
+    return [...set].sort((a, b) => a.localeCompare(b));
+  }, [entries]);
+
+  const suggestions = React.useMemo(() => {
+    const q = inputVal.trim();
+    if (!q || q.length < 2) return [];
+    const qs = stripAccents(q); return orienteurs.filter(o => stripAccents(o).includes(qs)).slice(0, 20);
+  }, [inputVal, orienteurs]);
+
+  function selectItem(name) {
+    setInputVal(name);
+    onChange(name);
+    setOpen(false);
+    setActiveIdx(0);
+  }
+
+  function handleKeyDown(e) {
+    if (!open || suggestions.length === 0) return;
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIdx(i => Math.min(i+1, suggestions.length-1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIdx(i => Math.max(i-1, 0)); }
+    else if (e.key === 'Enter') { e.preventDefault(); if (suggestions[activeIdx]) selectItem(suggestions[activeIdx]); }
+    else if (e.key === 'Escape') setOpen(false);
+  }
+
+  return CE('div', { className: 'combo-wrap', ref: wrapRef },
+    CE('input', {
+      type: 'text',
+      value: inputVal,
+      placeholder: 'Nom de l\'orienteur',
+      className: hasError ? 'err' : '',
+      autoComplete: 'off',
+      onChange: e => { setInputVal(e.target.value); onChange(e.target.value); setOpen(true); setActiveIdx(0); },
+      onFocus: () => { if (inputVal.trim().length >= 2) setOpen(true); },
+      onBlur: () => setTimeout(() => setOpen(false), 150),
+      onKeyDown: handleKeyDown
+    }),
+    open && suggestions.length > 0 && CE('div', { className: 'combo-dropdown' },
+      suggestions.map((name, i) =>
+        CE('div', {
+          key: name,
+          className: 'combo-item' + (i === activeIdx ? ' active' : ''),
+          onMouseDown: e => { e.preventDefault(); selectItem(name); },
+          onMouseEnter: () => setActiveIdx(i)
+        },
+          CE('span', { className: 'combo-nom' }, name)
+        )
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// VUE LISTES — Modal gestion des listes déroulantes
+// ═══════════════════════════════════════════════════════════
+const STATUT_COLORS = {
+  'Planifié':'#3b82f6','Réalisé':'#22c55e','Annulé':'#ef4444',
+  'Reporté':'#f97316','Non réalisé':'#94a3b8'
+};
+function getItemColor(tabKey, name) {
+  if (tabKey === 'statuts') return STATUT_COLORS[name] || '#94a3b8';
+  if (tabKey === 'conseillers') {
+    const cols = ['#7C3AED','#2563EB','#059669','#DB2777','#d97706','#0891b2','#65a30d','#dc2626'];
+    const idx = (name.charCodeAt(0) + (name.charCodeAt(1)||0)) % cols.length;
+    return cols[idx];
+  }
+  if (tabKey === 'publics') return '#6366f1';
+  if (tabKey === 'materiels') return '#0891b2';
+  return '#94a3b8';
+}
+
+function VueListes({lists, onSave, onClose}) {
+  const TABS = [
+    {key:'statuts',   label:'Statuts'},
+    {key:'conseillers', label:'Conseillers'},
+    {key:'publics',   label:'Types de public'},
+    {key:'materiels', label:'Matériels'},
+  ];
+  const [activeTab, setActiveTab] = React.useState('statuts');
+  const [draft, setDraft] = React.useState({
+    statuts:   [...lists.statuts],
+    conseillers:[...lists.conseillers],
+    publics:   [...lists.publics],
+    materiels: [...lists.materiels],
+  });
+  const [newVal, setNewVal] = React.useState('');
+  const [editIdx, setEditIdx] = React.useState(null);
+  const [editVal, setEditVal] = React.useState('');
+
+  const items = draft[activeTab];
+
+  function setItems(fn) {
+    setDraft(d => ({...d, [activeTab]: fn(d[activeTab])}));
+    setEditIdx(null);
+  }
+
+  function moveUp(i)   { if(i===0) return; setItems(arr=>{const a=[...arr];[a[i-1],a[i]]=[a[i],a[i-1]];return a;}); }
+  function moveDown(i) { if(i===items.length-1) return; setItems(arr=>{const a=[...arr];[a[i],a[i+1]]=[a[i+1],a[i]];return a;}); }
+  function remove(i)   { setItems(arr=>arr.filter((_,j)=>j!==i)); }
+  function startEdit(i){ setEditIdx(i); setEditVal(items[i]); }
+  function saveEdit(i) { if(!editVal.trim()) return; setItems(arr=>{const a=[...arr];a[i]=editVal.trim();return a;}); setEditIdx(null); }
+  function addItem()   {
+    const v = newVal.trim();
+    if(!v) return;
+    if(draft[activeTab].includes(v)){ showToast('⚠️ Cet élément existe déjà', false); return; }
+    setItems(arr=>[...arr, v]);
+    setNewVal('');
+  }
+
+  async function handleSave() {
+    onSave(draft);
+    onClose();
+    // Persister dans Google Sheets (v8.2)
+    try {
+      const res = await apiFetch('saveLists', { lists: JSON.stringify(draft) });
+      if (res && res.ok) {
+        showToast('✅ Listes enregistrées et synchronisées');
+      } else {
+        showToast('⚠️ Listes sauvegardées localement (erreur GAS)', false);
+      }
+    } catch(err) {
+      showToast('⚠️ Listes sauvegardées localement (hors-ligne)', false);
+    }
+  }
+
+  // Fermer sur Escape
+  React.useEffect(()=>{
+    function onKey(e){ if(e.key==='Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return ()=>document.removeEventListener('keydown', onKey);
+  },[]);
+
+  // Reset newVal quand on change d'onglet
+  React.useEffect(()=>{ setNewVal(''); setEditIdx(null); },[activeTab]);
+
+  return CE('div',{className:'listes-overlay', onClick:e=>{if(e.target.className==='listes-overlay')onClose();}},
+    CE('div',{className:'listes-modal', style:{position:'relative'}},
+      // Header
+      CE('div',{className:'listes-header'},
+        CE('button',{className:'listes-close',onClick:onClose},'×'),
+        CE('h2',null,'📋 Gestion des listes déroulantes'),
+        CE('p',null,'Ajouter, modifier, supprimer et réordonner')
+      ),
+      // Tabs
+      CE('div',{className:'listes-tabs'},
+        TABS.map(t=>CE('div',{
+          key:t.key,
+          className:'listes-tab'+(activeTab===t.key?' active':''),
+          onClick:()=>setActiveTab(t.key)
+        }, t.label, CE('span',{className:'tab-count'}, draft[t.key].length)))
+      ),
+      // Body
+      CE('div',{className:'listes-body'},
+        items.map((item, i)=>CE('div',{key:i, className:'listes-item'},
+          CE('div',{className:'listes-arrows'},
+            CE('button',{onClick:()=>moveUp(i), disabled:i===0, title:'Monter'},'▲'),
+            CE('button',{onClick:()=>moveDown(i), disabled:i===items.length-1, title:'Descendre'},'▼')
+          ),
+          CE('span',{className:'listes-dot', style:{background:getItemColor(activeTab,item)}}),
+          editIdx===i
+            ? CE('div',{className:'listes-name'},
+                CE('input',{
+                  autoFocus:true,
+                  value:editVal,
+                  onChange:e=>setEditVal(e.target.value),
+                  onKeyDown:e=>{ if(e.key==='Enter') saveEdit(i); if(e.key==='Escape') setEditIdx(null); }
+                })
+              )
+            : CE('div',{className:'listes-name'},item),
+          CE('div',{className:'listes-actions'},
+            editIdx===i
+              ? CE('button',{className:'btn btn-primary btn-sm', onClick:()=>saveEdit(i)},'✓ OK')
+              : CE('button',{className:'btn btn-secondary btn-sm', onClick:()=>startEdit(i)},'Modifier'),
+            CE('button',{
+              className:'btn btn-sm',
+              style:{background:'#fee2e2',color:'#991b1b',border:'none'},
+              onClick:()=>remove(i)
+            },'Suppr.')
+          )
+        )),
+        // Ajout
+        CE('div',{className:'listes-add-row'},
+          CE('input',{
+            type:'text',
+            placeholder:`Ajouter dans ${TABS.find(t=>t.key===activeTab)?.label}…`,
+            value:newVal,
+            onChange:e=>setNewVal(e.target.value),
+            onKeyDown:e=>{ if(e.key==='Enter') addItem(); }
+          }),
+          CE('button',{className:'btn btn-primary', onClick:addItem},'+ Ajouter')
+        )
+      ),
+      // Footer
+      CE('div',{className:'listes-footer'},
+        CE('button',{className:'btn btn-secondary', onClick:onClose},'Annuler'),
+        CE('button',{className:'btn btn-primary', onClick:handleSave},'💾 Enregistrer')
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// LOGIN
+// ═══════════════════════════════════════════════════════════
+function Login({onLogin}) {
+  const [pwd, setPwd] = React.useState('');
+  const [err, setErr] = React.useState('');
+  function tryLogin() {
+    if (pwd === ADMIN_PWD) onLogin();
+    else setErr('Mot de passe incorrect');
+  }
+  return CE('div',{className:'login-wrap'},
+    CE('div',{className:'login-card'},
+      CE('h2',null,'🔐 Accès Administrateur'),
+      CE('label',null,'Mot de passe'),
+      CE('input',{type:'password',value:pwd,
+        onChange:e=>{ setPwd(e.target.value); setErr(''); },
+        onKeyDown:e=>e.key==='Enter'&&tryLogin(),
+        placeholder:'Mot de passe admin'}),
+      err && CE('div',{className:'err-msg',style:{marginBottom:8}},err),
+      CE('button',{className:'btn btn-primary',style:{width:'100%'},onClick:tryLogin},'Connexion')
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// VUE SAISIE (identique au frontend)
+// ═══════════════════════════════════════════════════════════
+function VueSaisie({entries, onSaved, onNewEntry, lists, editingId, onClearEdit}) {
+  const statuts   = lists?.statuts   || STATUTS_DEFAULT;
+  const conseillers = lists?.conseillers || CONSEILLERS_DEFAULT;
+  const publics   = lists?.publics   || PUBLICS_DEFAULT;
+  const materiels = lists?.materiels || MATERIELS_DEFAULT;
+  const empty = {
+    _id:'',_n:'',statut:'',date:'',horaire:'',ampm:'',
+    orienteur:'',commune:'',lieu:'',thematique:'',
+    inscrits:'',presents:'',public:'',conseiller:'',
+    materiel:[],residence:'',remarques:''
+  };
+  const [form,setForm] = React.useState(empty);
+  const [errors,setErrors] = React.useState({});
+  const [saving,setSaving] = React.useState(false);
+  const [editId,setEditId] = React.useState(null);
+
+  // Charger l'atelier à éditer dès que editingId change (passé depuis App via handleEdit)
+  React.useEffect(()=>{
+    if (!editingId) return;
+    const e = entries.find(x=>x._id===editingId);
+    if (!e) return;
+    setForm({...empty,...e,materiel:e.materiel||[]});
+    setEditId(editingId);
+    window.scrollTo(0,0);
+    if (onClearEdit) onClearEdit(); // reset dans App pour éviter re-déclenchement
+  },[editingId, entries]);
+  function set(k,v){setForm(f=>({...f,[k]:v}));setErrors(er=>({...er,[k]:''}));}
+  function toggleMat(m){setForm(f=>({...f,materiel:f.materiel.includes(m)?f.materiel.filter(x=>x!==m):[...f.materiel,m]}));}
+
+  function validate(){
+    const e={};
+    if(!form.statut)               e.statut='Requis';
+    if(!form.date)                 e.date='Requis';
+    if(!form.horaire)              e.horaire='Requis';
+    if(!form.ampm)                 e.ampm='Requis';
+    if(!form.commune.trim())       e.commune='Requis';
+    if(!form.lieu.trim())          e.lieu='Requis';
+    if(!form.thematique.trim())    e.thematique='Requis';
+    if(!form.conseiller)           e.conseiller='Requis';
+    if(!form.orienteur.trim())     e.orienteur='Requis';
+    if(!form.public)               e.public='Requis';
+    if(form.inscrits==='')         e.inscrits='Requis';
+    setErrors(e);
+    return Object.keys(e).length===0;
+  }
+
+  async function handleSubmit(){
+    if(!validate()) return;
+    setSaving(true);
+    try {
+      const entry={...form,_id:form._id||genId(),
+        inscrits:form.inscrits===''?'':parseInt(form.inscrits)||0,
+        presents:form.presents===''?'':parseInt(form.presents)||0};
+      const res = await apiFetch('save',{entry});
+      if(!res.ok) throw new Error(res.error);
+      showToast(editId?'✅ Atelier modifié':'✅ Atelier enregistré');
+      if(onNewEntry && !editId) onNewEntry(entry);
+      onSaved(); setForm(empty); setEditId(null);
+    } catch(err){ showToast('❌ '+err.message,false); }
+    finally{ setSaving(false); }
+  }
+
+  return CE('div',null,
+    CE('div',{className:'card'},
+      CE('h2',null,editId?'✏️ Modifier l\'atelier':'➕ Nouvel atelier'),
+      CE('div',{className:'row3'},
+        CE('div',null, CE('label',null,'Statut *'),
+          CE('select',{value:form.statut,className:errors.statut?'err':'',onChange:e=>set('statut',e.target.value)},
+            CE('option',{value:'',disabled:true},'— Choisir —'),
+            statuts.map(s=>CE('option',{key:s,value:s},s))),
+          errors.statut&&CE('span',{className:'err-msg'},errors.statut)),
+        CE('div',null, CE('label',null,'Date *'),
+          CE('input',{type:'date',value:form.date,className:errors.date?'err':'',onChange:e=>set('date',e.target.value)}),
+          errors.date&&CE('span',{className:'err-msg'},errors.date)),
+        CE('div',{style:{display:'flex',gap:8}},
+          CE('div',{style:{flex:1}}, CE('label',null,'Horaire *'),
+            CE('input',{type:'time',value:form.horaire,className:errors.horaire?'err':'',onChange:e=>set('horaire',e.target.value)}),
+            errors.horaire&&CE('span',{className:'err-msg'},errors.horaire)),
+          CE('div',{style:{width:80}}, CE('label',null,'AM/PM *'),
+            CE('select',{value:form.ampm,className:errors.ampm?'err':'',onChange:e=>set('ampm',e.target.value)},
+              CE('option',{value:'',disabled:true},'—'),
+              CE('option',{value:'AM'},'AM'),CE('option',{value:'PM'},'PM')),
+            errors.ampm&&CE('span',{className:'err-msg'},errors.ampm)))
+      ),
+      CE('div',{className:'row2'},
+        CE('div',null, CE('label',null,'Commune *'),
+          CE(ComboCommune,{value:form.commune,onChange:v=>set('commune',v),hasError:!!errors.commune}),
+          errors.commune&&CE('span',{className:'err-msg'},errors.commune)
+        ),
+        CE('div',null, CE('label',null,'Lieu *'),
+          CE('input',{type:'text',value:form.lieu,placeholder:'Salle, médiathèque…',className:errors.lieu?'err':'',onChange:e=>set('lieu',e.target.value)}),
+          errors.lieu&&CE('span',{className:'err-msg'},errors.lieu))
+      ),
+      CE('div',null, CE('label',null,'Thématique *'),
+        CE('input',{type:'text',value:form.thematique,placeholder:'Sujet de l\'atelier',className:errors.thematique?'err':'',onChange:e=>set('thematique',e.target.value)}),
+        errors.thematique&&CE('span',{className:'err-msg'},errors.thematique)),
+      CE('div',{className:'row3'},
+        CE('div',null, CE('label',null,'Conseiller *'),
+          CE('select',{value:form.conseiller,className:errors.conseiller?'err':'',onChange:e=>set('conseiller',e.target.value)},
+            CE('option',{value:'',disabled:true},'— Choisir —'),
+            conseillers.map(c=>CE('option',{key:c,value:c},c))),
+          errors.conseiller&&CE('span',{className:'err-msg'},errors.conseiller)),
+        CE('div',null, CE('label',null,'Orienteur *'),
+          CE(ComboOrienteur,{value:form.orienteur,onChange:v=>set('orienteur',v),entries:entries,hasError:!!errors.orienteur}),
+          errors.orienteur&&CE('span',{className:'err-msg'},errors.orienteur)),
+        CE('div',null, CE('label',null,'Type de public *'),
+          CE('select',{value:form.public,className:errors.public?'err':'',onChange:e=>set('public',e.target.value)},
+            CE('option',{value:'',disabled:true},'— Choisir —'),
+            publics.map(p=>CE('option',{key:p,value:p},p))),
+          errors.public&&CE('span',{className:'err-msg'},errors.public))
+      ),
+      CE('div',{className:'row2'},
+        CE('div',null, CE('label',null,'Inscrits *'),
+          CE('input',{type:'number',min:0,value:form.inscrits,placeholder:'0',className:errors.inscrits?'err':'',onChange:e=>set('inscrits',e.target.value)}),
+          errors.inscrits&&CE('span',{className:'err-msg'},errors.inscrits)),
+        CE('div',null, CE('label',null,'Présents'),
+          CE('input',{type:'number',min:0,value:form.presents,placeholder:'0',onChange:e=>set('presents',e.target.value)}))
+      ),
+      CE('div',null, CE('label',null,'Matériel utilisé'),
+        CE('div',{className:'mat-checks'},
+          materiels.map(m=>CE('label',{key:m},CE('input',{type:'checkbox',checked:form.materiel.includes(m),onChange:()=>toggleMat(m)}),m)))),
+      CE('div',{className:'row2'},
+        CE('div',null, CE('label',null,'Commune de résidence'),
+          CE('input',{type:'text',value:form.residence,placeholder:'Optionnel',onChange:e=>set('residence',e.target.value)})),
+        CE('div',null, CE('label',null,'Remarques'),
+          CE('input',{type:'text',value:form.remarques,placeholder:'Notes libres',onChange:e=>set('remarques',e.target.value)}))
+      ),
+      CE('div',{style:{marginTop:20,display:'flex',gap:10}},
+        CE('button',{className:'btn btn-primary',onClick:handleSubmit,disabled:saving},
+          saving?CE('span',null,CE('span',{className:'spinner'}),'Enregistrement…'):(editId?'💾 Modifier':'💾 Enregistrer')),
+        CE('button',{className:'btn btn-secondary',onClick:()=>{setForm(empty);setEditId(null);setErrors({});}}, '✖ Annuler')
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// VUE HISTORIQUE
+// ═══════════════════════════════════════════════════════════
+function VueHistorique({entries, onEdit, onDelete, onRefresh}) {
+  const [search,setSearch] = React.useState('');
+  const [dSearch,setDSearch] = React.useState('');
+  const [filtStatut,setFiltStatut] = React.useState('Planifié');
+  const [filtMois,setFiltMois] = React.useState('Tous');
+  const [filtCommune,setFiltCommune] = React.useState('Toutes');
+  const [filtConseiller,setFiltConseiller] = React.useState('Tous');
+  const [sortDir,setSortDir] = React.useState(1);
+  const [dateFrom,setDateFrom] = React.useState('');
+  const [dateTo,setDateTo] = React.useState('');
+  const [panel,setPanel] = React.useState(null);
+  const [panelStatut,setPanelStatut] = React.useState('');
+  const [panelInscrits,setPanelInscrits] = React.useState('');
+  const [panelPresents,setPanelPresents] = React.useState('');
+  const [panelNote,setPanelNote] = React.useState('');
+  const [saving,setSaving] = React.useState(false);
+  const [confirmDel,setConfirmDel] = React.useState(null);
+
+  React.useEffect(()=>{const t=setTimeout(()=>setDSearch(search),300);return()=>clearTimeout(t);},[search]);
+
+  React.useEffect(()=>{
+    window._filterNewEntries = (ids) => {
+      setFiltStatut('Tous');
+      setFiltMois('Tous');
+      setFiltCommune('Toutes');
+      setFiltConseiller('Tous');
+      setDateFrom('');
+      setDateTo('');
+      setSearch('');
+      setDSearch('');
+      window._newIdsFilter = new Set(ids);
+      
+    };
+    return ()=>{ window._filterNewEntries=null; };
+  },[]);
+
+  const moisDispo = React.useMemo(()=>{
+    const s=new Set(entries.map(e=>e.date?e.date.slice(0,7):'').filter(Boolean));
+    return [...s].sort();
+  },[entries]);
+
+  const CHIP_STATUTS=[
+    {key:'Tous',label:'Tous',cls:'chip-all'},
+    {key:'Planifié',label:'Planifié',cls:'chip-planifie',dot:'#3b82f6'},
+    {key:'Réalisé',label:'Réalisé',cls:'chip-realise',dot:'#22c55e'},
+    {key:'Annulé',label:'Annulé',cls:'chip-annule',dot:'#ef4444'},
+    {key:'Reporté',label:'Reporté',cls:'chip-reporte',dot:'#f59e0b'},
+    {key:'Non réalisé',label:'Non réalisé',cls:'chip-nonrealise',dot:'#94a3b8'},
+  ];
+
+  const counts = React.useMemo(()=>{
+    const c={Tous:entries.length};
+    STATUTS.forEach(s=>{c[s]=entries.filter(e=>e.statut===s).length;});
+    return c;
+  },[entries]);
+
+  const filtered = React.useMemo(()=>{
+    let r=entries;
+    if(filtStatut!=='Tous') r=r.filter(e=>e.statut===filtStatut);
+    if(filtMois!=='Tous') r=r.filter(e=>e.date&&e.date.startsWith(filtMois));
+    if(filtCommune!=='Toutes') r=r.filter(e=>e.commune===filtCommune);
+    if(filtConseiller!=='Tous') r=r.filter(e=>e.conseiller===filtConseiller);
+    if(dateFrom) r=r.filter(e=>e.date>=dateFrom);
+    if(dateTo) r=r.filter(e=>e.date<=dateTo);
+    if(dSearch){const q=dSearch.toLowerCase();r=r.filter(e=>[e.lieu,e.thematique,e.orienteur,e.commune,e.public].some(v=>String(v||'').toLowerCase().includes(q)));}
+    if(window._newIdsFilter&&window._newIdsFilter.size>0) r=r.filter(e=>window._newIdsFilter.has(e._id));
+    return [...r].sort((a,b)=>{const va=a.date||'',vb=b.date||'';return va<vb?-sortDir:va>vb?sortDir:0;});
+  },[entries,filtStatut,filtMois,filtCommune,filtConseiller,dSearch,sortDir,dateFrom,dateTo]);
+
+  const kpi = React.useMemo(()=>{
+    const realises=filtered.filter(e=>e.statut==='Réalisé');
+    const annules=filtered.filter(e=>e.statut==='Annulé').length;
+    const inscrits=filtered.reduce((s,e)=>s+(parseInt(e.inscrits)||0),0);
+    const presents=filtered.reduce((s,e)=>s+(parseInt(e.presents)||0),0);
+    const tx=inscrits>0?Math.round(presents/inscrits*100):0;
+    return {total:filtered.length,realises:realises.length,annules,inscrits,presents,tx};
+  },[filtered]);
+
+  const nRetard=entries.filter(isRetard).length;
+  const pageData=filtered;
+
+  function openPanel(e){setPanel(e);setPanelStatut(e.statut);setPanelInscrits(e.inscrits===undefined||e.inscrits===''?'':String(e.inscrits));setPanelPresents(e.presents===undefined||e.presents===''?'':String(e.presents));setPanelNote(e.remarques||'');}
+  function closePanel(){setPanel(null);}
+
+  async function savePanel(){
+    if(!panel) return;
+    setSaving(true);
+    try {
+      const updated={...panel,statut:panelStatut,inscrits:panelInscrits===''?'':parseInt(panelInscrits)||0,presents:panelPresents===''?'':parseInt(panelPresents)||0,remarques:panelNote};
+      const res=await apiFetch('save',{entry:updated});
+      if(!res.ok) throw new Error(res.error);
+      showToast('✅ Mis à jour');
+      closePanel(); onRefresh();
+    } catch(err){showToast('❌ '+err.message,false);}
+    finally{setSaving(false);}
+  }
+
+  function resetFiltres(){setSearch('');setDSearch('');setFiltStatut('Planifié');setFiltMois('Tous');setFiltCommune('Toutes');setFiltConseiller('Tous');setDateFrom('');setDateTo('');window._newIdsFilter=null;}
+
+  function exportXLSX(){
+    const rows=[['N°','Statut','Date','Horaire','Commune','Lieu','Thématique','Inscrits','Présents','Public','Conseiller','Orienteur','Matériel','Résidence','Remarques']];
+    filtered.forEach(e=>rows.push([e._n,e.statut,fmtDate(e.date),e.horaire,e.commune,e.lieu,e.thematique,e.inscrits,e.presents,e.public,e.conseiller,e.orienteur,(e.materiel||[]).join(', '),e.residence,e.remarques]));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(rows),'Ateliers');
+    XLSX.writeFile(wb,`ateliers_cd47_${new Date().toISOString().slice(0,10)}.xlsx`);
+  }
+
+  const BORDER_COLOR={'Planifié':'#3b82f6','Réalisé':'#22c55e','Annulé':'#ef4444','Reporté':'#f59e0b','Non réalisé':'#94a3b8'};
+
+  return CE('div',null,
+    CE('div',{className:'kpi-row'},
+      CE('div',{className:'kpi-mini'},CE('div',{className:'v',style:{color:'#1e3a8a'}},kpi.total),CE('div',{className:'l'},'Total')),
+      CE('div',{className:'kpi-mini'},CE('div',{className:'v',style:{color:'#166534'}},kpi.realises),CE('div',{className:'l'},'Réalisés'),CE('div',{className:'p',style:{color:'#166534'}},kpi.total?Math.round(kpi.realises/kpi.total*100)+'%':'-')),
+      CE('div',{className:'kpi-mini'},CE('div',{className:'v',style:{color:'#991b1b'}},kpi.annules),CE('div',{className:'l'},'Annulés'),CE('div',{className:'p',style:{color:'#991b1b'}},kpi.total?Math.round(kpi.annules/kpi.total*100)+'%':'-')),
+      CE('div',{className:'kpi-mini'},CE('div',{className:'v',style:{color:'#2563eb'}},kpi.inscrits),CE('div',{className:'l'},'Inscrits')),
+      CE('div',{className:'kpi-mini'},CE('div',{className:'v',style:{color:'#d97706'}},kpi.presents),CE('div',{className:'l'},'Présents'),CE('div',{className:'p',style:{color:'#d97706'}},kpi.tx+'%'))
+    ),
+    nRetard>0&&CE('div',{style:{background:'#fffbeb',border:'1px solid #fcd34d',borderRadius:10,padding:'10px 14px',marginBottom:10,display:'flex',gap:10,alignItems:'center'}},
+      CE('span',{style:{fontSize:20}},'⚠️'),
+      CE('div',null,
+        CE('div',{style:{fontWeight:700,color:'#92400e',fontSize:13}},`${nRetard} atelier(s) en attente de mise à jour`),
+        CE('div',{style:{fontSize:12,color:'#b45309'}},'Statut "Planifié" mais date déjà passée')
+      )
+    ),
+    CE('div',{className:'card',style:{marginBottom:10}},
+      CE('div',{style:{fontSize:11,fontWeight:700,color:'#718096',letterSpacing:'.06em',marginBottom:6}},'STATUT'),
+      CE('div',{className:'chip-bar'},
+        CHIP_STATUTS.map(c=>CE('button',{key:c.key,className:`chip ${c.cls}${filtStatut===c.key?' active':''}`,
+          onClick:()=>{setFiltStatut(c.key);}},
+          c.dot&&CE('span',{className:'chip-dot',style:{background:c.dot}}),
+          c.label,' ',CE('span',{style:{opacity:.7,fontSize:11}},'('+counts[c.key]+')')
+        ))
+      ),
+      CE('hr',{style:{border:'none',borderTop:'1px solid #f0f4f8',margin:'10px 0'}}),
+      CE('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center'}},
+        CE('input',{type:'text',value:search,placeholder:'🔍 Recherche…',style:{flex:'1 1 160px',padding:'6px 10px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:13},onChange:e=>{setSearch(e.target.value);}}),
+        CE('select',{style:{padding:'6px 8px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:12},value:filtMois,onChange:e=>{setFiltMois(e.target.value);}},
+          CE('option',{value:'Tous'},'Tous les mois'),
+          moisDispo.map(m=>CE('option',{key:m,value:m},m))
+        ),
+        CE('select',{style:{padding:'6px 8px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:12},value:filtCommune,onChange:e=>{setFiltCommune(e.target.value);}},
+          CE('option',{value:'Toutes'},'Toutes communes'),
+          COMMUNES.map(c=>CE('option',{key:c,value:c},c))
+        ),
+        CE('select',{style:{padding:'6px 8px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:12},value:filtConseiller,onChange:e=>{setFiltConseiller(e.target.value);}},
+          CE('option',{value:'Tous'},'Tous conseillers'),
+          CONSEILLERS.map(c=>CE('option',{key:c,value:c},c))
+        )
+      ),
+      CE('div',{style:{display:'flex',gap:8,flexWrap:'wrap',alignItems:'center',marginTop:8}},
+        CE('div',{style:{display:'flex',alignItems:'center',gap:4}},
+          CE('span',{style:{fontSize:11,fontWeight:700,color:'#718096',whiteSpace:'nowrap'}},'Du'),
+          CE('input',{type:'date',value:dateFrom,onChange:e=>{setDateFrom(e.target.value);},style:{padding:'6px 8px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:12}}),
+          CE('span',{style:{fontSize:11,fontWeight:700,color:'#718096',whiteSpace:'nowrap'}},'Au'),
+          CE('input',{type:'date',value:dateTo,onChange:e=>{setDateTo(e.target.value);},style:{padding:'6px 8px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:12}})
+        ),
+        CE('button',{className:'btn btn-secondary btn-sm',onClick:()=>setSortDir(d=>-d)},sortDir===1?'↑ Date':'↓ Date'),
+        CE('button',{className:'btn btn-secondary btn-sm',onClick:exportXLSX},'📥 XLSX'),
+        CE('button',{className:'btn btn-secondary btn-sm',onClick:onRefresh},'🔄 Sync'),
+        CE('button',{className:'btn btn-secondary btn-sm',onClick:resetFiltres},'✖ Réinitialiser')
+      ),
+      CE('div',{style:{fontSize:11,color:'#718096',marginTop:8}},`${filtered.length} atelier(s) affiché(s) sur ${entries.length}`)
+    ),
+    CE('div',null, pageData.map(e=>{
+      const d=fmtCardDate(e.date);
+      const retard=isRetard(e);
+      const cColor=conseillerColor(e.conseiller);
+      // Convertir hex en rgba pour le fond léger
+      const hexToRgba=(hex,a)=>{const r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return `rgba(${r},${g},${b},${a})`;};
+      return CE('div',{key:e._id,className:'atelier-card',style:{background:retard?'#fffbeb':hexToRgba(cColor,0.04),borderLeft:'none'},onClick:()=>openPanel(e)},
+        CE('div',{className:'atelier-card-border',style:{background:cColor}}),
+        CE('div',{className:'atelier-card-date',style:{background:hexToRgba(cColor,0.08),borderRight:`1px solid ${hexToRgba(cColor,0.2)}`}},
+          CE('div',{className:'atelier-card-day'},d.day),
+          CE('div',{className:'atelier-card-month'},d.month),
+          CE('div',{className:'atelier-card-jour'},d.jour),
+          CE('div',{className:'atelier-card-time'},e.horaire)
+        ),
+        CE('div',{className:'atelier-card-body'},
+          CE('div',{className:'atelier-card-badges'},
+            badgePill(e.statut,retard),
+            CE('span',{className:'badge-pill bp-public'},e.public||'Tous publics')
+          ),
+          CE('div',{className:'atelier-card-conseiller',style:{color:conseillerColor(e.conseiller)}},e.conseiller),
+          CE('div',{className:'atelier-card-title'},e.thematique),
+          CE('div',{className:'atelier-card-sub'},
+            e.commune,' — ',e.lieu,
+            (e.inscrits||e.presents)?CE('span',null,' · ',e.presents||0,'/',e.inscrits||0,' présents'):null
+          )
+        ),
+        CE('div',{className:'atelier-card-arrow'},'›')
+      );
+    })),
+
+    panel&&CE('div',{className:'side-panel-overlay',onClick:closePanel}),
+    CE('div',{className:'side-panel'+(panel?' open':'')},
+      panel&&CE(React.Fragment,null,
+        CE('div',{className:'side-panel-header'},
+          CE('h3',null,'Mise à jour rapide'),
+          CE('button',{onClick:closePanel,style:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#718096'}},'✕')
+        ),
+        CE('div',{className:'side-panel-body'},
+          CE('div',{style:{fontSize:13,fontWeight:700,color:'#1a202c',marginBottom:8}},panel.thematique),
+          CE('div',{className:'sp-info-row'},CE('span',null,'Date'),CE('span',null,fmtDate(panel.date),' ',panel.horaire)),
+          CE('div',{className:'sp-info-row'},CE('span',null,'Commune'),CE('span',null,panel.commune)),
+          CE('div',{className:'sp-info-row'},CE('span',null,'Lieu'),CE('span',null,panel.lieu)),
+          panel.orienteur&&CE('div',{className:'sp-info-row'},CE('span',null,'Orienteur'),CE('span',null,panel.orienteur)),
+          CE('div',{className:'sp-info-row'},CE('span',null,'Public'),CE('span',null,panel.public)),
+          CE('div',{className:'sp-info-row'},CE('span',null,'Conseiller'),CE('span',{style:{color:conseillerColor(panel.conseiller),fontWeight:700}},panel.conseiller)),
+          (panel.materiel&&panel.materiel.length>0)&&CE('div',{style:{marginTop:10,marginBottom:4}},
+            CE('div',{style:{fontSize:11,fontWeight:700,color:'#718096',marginBottom:4}},'MATÉRIEL'),
+            panel.materiel.map(m=>CE('span',{key:m,className:'mat-chip'},m))
+          ),
+          CE('hr',{style:{border:'none',borderTop:'1px solid #e2e8f0',margin:'12px 0'}}),
+          CE('div',{className:'sp-field'},
+            CE('label',null,'Statut *'),
+            CE('select',{value:panelStatut,onChange:e=>setPanelStatut(e.target.value),style:{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:13}},
+              STATUTS.map(s=>CE('option',{key:s,value:s},s))
+            )
+          ),
+          CE('div',{className:'sp-field'},
+            CE('label',null,'Nombre d\'inscrits'),
+            CE('input',{type:'number',min:0,value:panelInscrits,onChange:e=>setPanelInscrits(e.target.value),
+              style:{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:13},placeholder:'0'})
+          ),
+          CE('div',{className:'sp-field'},
+            CE('label',null,'Nombre de présents'),
+            CE('input',{type:'number',min:0,value:panelPresents,onChange:e=>setPanelPresents(e.target.value),
+              style:{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:13},placeholder:'0'})
+          ),
+          CE('div',{className:'sp-field'},
+            CE('label',null,'Remarques'),
+            CE('textarea',{value:panelNote,onChange:e=>setPanelNote(e.target.value),rows:3,
+              placeholder:'Ajouter une note…',
+              style:{width:'100%',padding:'8px 10px',border:'1.5px solid #e2e8f0',borderRadius:6,fontSize:13,resize:'vertical'}})
+          )
+        ),
+        CE('div',{className:'side-panel-footer'},
+          CE('button',{className:'btn btn-danger btn-sm',onClick:()=>{setConfirmDel(panel);closePanel();}},'Supprimer'),
+          CE('button',{className:'btn btn-secondary',style:{flex:1},onClick:()=>onEdit(panel._id)},'Éditer complet'),
+          CE('button',{className:'btn btn-primary',style:{flex:1},onClick:savePanel,disabled:saving},saving?'…':'💾 Enregistrer')
+        )
+      )
+    ),
+    confirmDel&&CE('div',{style:{position:'fixed',inset:0,background:'rgba(0,0,0,.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000}},
+      CE('div',{className:'card',style:{width:360}},
+        CE('h2',null,'🗑️ Confirmer la suppression'),
+        CE('p',{style:{margin:'12px 0',fontSize:13}},`Supprimer l'atelier #${confirmDel._n} — ${confirmDel.thematique} ?`),
+        CE('p',{style:{fontSize:12,color:'#718096',marginBottom:16}},'Cette action est irréversible.'),
+        CE('div',{style:{display:'flex',gap:10}},
+          CE('button',{className:'btn btn-danger',onClick:()=>{onDelete(confirmDel._id);setConfirmDel(null);}},'🗑️ Supprimer'),
+          CE('button',{className:'btn btn-secondary',onClick:()=>setConfirmDel(null)},'Annuler')
+        )
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// GRAPHIQUES SVG NATIFS
+// ═══════════════════════════════════════════════════════════
+function Tooltip({tip}){
+  if(!tip) return null;
+  return CE('div',{style:{position:'fixed',left:tip.x+12,top:tip.y-10,background:'#1a202c',color:'#fff',padding:'5px 10px',borderRadius:6,fontSize:12,pointerEvents:'none',zIndex:999,whiteSpace:'nowrap',boxShadow:'0 2px 8px rgba(0,0,0,.3)'}},tip.text);
+}
+function BarChart({data,colors,height=220}){
+  const [tip,setTip]=React.useState(null);
+  if(!data||data.length===0) return CE('p',{style:{color:'#718096',fontSize:12,textAlign:'center',paddingTop:20}},'Aucune donnée');
+  const W=360,H=height,pad={t:22,r:10,b:60,l:36};
+  const max=Math.max(...data.map(d=>d.value),1);
+  const bw=Math.max(8,Math.floor((W-pad.l-pad.r)/data.length)-4);
+  const bars=data.map((d,i)=>{
+    const x=pad.l+(W-pad.l-pad.r)/data.length*i+(W-pad.l-pad.r)/data.length/2-bw/2;
+    const bh=Math.max(2,(d.value/max)*(H-pad.t-pad.b));
+    const y=H-pad.b-bh;
+    const col=Array.isArray(colors)?colors[i%colors.length]:(colors||'#1e3a8a');
+    const lbl=d.label.length>10?d.label.slice(0,9)+'…':d.label;
+    return CE('g',{key:i,onMouseMove:e=>setTip({x:e.clientX,y:e.clientY,text:d.tip||`${d.label} : ${d.value} atelier(s)`}),onMouseLeave:()=>setTip(null),onTouchStart:e=>{const t=e.touches[0];setTip({x:t.clientX,y:t.clientY,text:`${d.label} : ${d.value} atelier(s)`});},onTouchEnd:()=>setTimeout(()=>setTip(null),1500),style:{cursor:'pointer'}},
+      CE('rect',{x,y,width:bw,height:bh,fill:col,rx:3}),
+      CE('text',{x:x+bw/2,y:H-pad.b+14,textAnchor:'middle',fontSize:9,fill:'#4a5568',transform:`rotate(-35,${x+bw/2},${H-pad.b+14})`},lbl),
+      CE('text',{x:x+bw/2,y:y-5,textAnchor:'middle',fontSize:11,fontWeight:'700',fill:'#1a202c'},d.value)
+    );
+  });
+  return CE('div',{style:{position:'relative'}},
+    CE('svg',{viewBox:`0 0 ${W} ${H}`,width:'100%',style:{display:'block',overflow:'visible'}},
+      CE('line',{x1:pad.l,y1:pad.t,x2:pad.l,y2:H-pad.b,stroke:'#e2e8f0',strokeWidth:1}),
+      CE('line',{x1:pad.l,y1:H-pad.b,x2:W-pad.r,y2:H-pad.b,stroke:'#e2e8f0',strokeWidth:1}),
+      ...bars
+    ),CE(Tooltip,{tip})
+  );
+}
+function DonutChart({data,colors,size=200}){
+  const [tip,setTip]=React.useState(null);
+  if(!data||data.length===0) return CE('p',{style:{color:'#718096',fontSize:12,textAlign:'center',paddingTop:20}},'Aucune donnée');
+  const total=data.reduce((s,d)=>s+d.value,0);
+  if(total===0) return null;
+  const cx=size/2,cy=size/2,r=size*0.38,ri=size*0.22;
+  let angle=-Math.PI/2;
+  const slices=data.map((d,i)=>{
+    const a=(d.value/total)*Math.PI*2;
+    const x1=cx+r*Math.cos(angle),y1=cy+r*Math.sin(angle);
+    const x2=cx+r*Math.cos(angle+a),y2=cy+r*Math.sin(angle+a);
+    const xi1=cx+ri*Math.cos(angle),yi1=cy+ri*Math.sin(angle);
+    const xi2=cx+ri*Math.cos(angle+a),yi2=cy+ri*Math.sin(angle+a);
+    const large=a>Math.PI?1:0;
+    const col=Array.isArray(colors)?colors[i%colors.length]:'#1e3a8a';
+    const mid=angle+a/2;
+    const lx=cx+(r+12)*Math.cos(mid),ly=cy+(r+12)*Math.sin(mid);
+    const pct=Math.round(d.value/total*100);
+    const slice=CE('path',{key:i,d:`M${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} L${xi2},${yi2} A${ri},${ri} 0 ${large},0 ${xi1},${yi1} Z`,fill:col,onMouseMove:e=>setTip({x:e.clientX,y:e.clientY,text:`${d.label} : ${d.value} (${pct}%)`}),onMouseLeave:()=>setTip(null),onTouchStart:e=>{const t=e.touches[0];setTip({x:t.clientX,y:t.clientY,text:`${d.label} : ${d.value} (${pct}%)`});},onTouchEnd:()=>setTimeout(()=>setTip(null),1500),style:{cursor:'pointer'}});
+    angle+=a;
+    return [slice,pct>=6?CE('text',{key:'t'+i,x:lx,y:ly,textAnchor:'middle',fontSize:11,fontWeight:'700',fill:'#fff',dominantBaseline:'middle'},pct+'%'):null];
+  });
+  const leg=data.map((d,i)=>CE('div',{key:i,style:{display:'flex',alignItems:'center',gap:6,fontSize:11,color:'#4a5568',marginBottom:3}},
+    CE('span',{style:{width:10,height:10,borderRadius:2,background:Array.isArray(colors)?colors[i%colors.length]:'#1e3a8a',display:'inline-block',flexShrink:0}}),
+    CE('span',null,`${d.label} (${d.value})`)
+  ));
+  return CE('div',{style:{position:'relative'}},
+    CE('div',{style:{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}},
+      CE('svg',{viewBox:`0 0 ${size} ${size}`,width:size,height:size,style:{flexShrink:0}},slices.flat().filter(Boolean)),
+      CE('div',null,...leg)
+    ),CE(Tooltip,{tip})
+  );
+}
+function LineChart({data,height=180}){
+  const [tip,setTip]=React.useState(null);
+  if(!data||data.length===0) return CE('p',{style:{color:'#718096',fontSize:12,textAlign:'center',paddingTop:20}},'Aucune donnée');
+  const W=360,H=height,pad={t:16,r:16,b:40,l:36};
+  const max=Math.max(...data.map(d=>d.value),1);
+  const pts=data.map((d,i)=>{const x=pad.l+(W-pad.l-pad.r)/(data.length-1||1)*i;const y=H-pad.b-(d.value/max)*(H-pad.t-pad.b);return{x,y,d};});
+  const polyline=pts.map(p=>`${p.x},${p.y}`).join(' ');
+  const area=`${pts[0].x},${H-pad.b} `+pts.map(p=>`${p.x},${p.y}`).join(' ')+` ${pts[pts.length-1].x},${H-pad.b}`;
+  return CE('div',{style:{position:'relative'}},
+    CE('svg',{viewBox:`0 0 ${W} ${H}`,width:'100%',style:{display:'block'}},
+      CE('polygon',{points:area,fill:'#059669',opacity:.12}),
+      CE('polyline',{points:polyline,fill:'none',stroke:'#059669',strokeWidth:2,strokeLinejoin:'round'}),
+      pts.map((p,i)=>CE('g',{key:i,onMouseMove:e=>setTip({x:e.clientX,y:e.clientY,text:p.d.tip||`${p.d.label} : ${p.d.value} atelier(s)`}),onMouseLeave:()=>setTip(null),onTouchStart:e=>{const t=e.touches[0];setTip({x:t.clientX,y:t.clientY,text:`${p.d.label} : ${p.d.value} atelier(s)`});},onTouchEnd:()=>setTimeout(()=>setTip(null),1500),style:{cursor:'pointer'}},
+        CE('circle',{cx:p.x,cy:p.y,r:6,fill:'transparent'}),
+        CE('circle',{cx:p.x,cy:p.y,r:3,fill:'#059669'}),
+        CE('text',{x:p.x,y:H-pad.b+12,textAnchor:'middle',fontSize:9,fill:'#4a5568',transform:`rotate(-45,${p.x},${H-pad.b+12})`},p.d.label.slice(0,7)),
+        CE('text',{x:p.x,y:p.y-6,textAnchor:'middle',fontSize:9,fill:'#059669'},p.d.value)
+      )),
+      CE('line',{x1:pad.l,y1:H-pad.b,x2:W-pad.r,y2:H-pad.b,stroke:'#e2e8f0',strokeWidth:1})
+    ),CE(Tooltip,{tip})
+  );
+}
+function VueGraphiques({entries}) {
+  const passes=entries.filter(isPasse);
+  const total=passes.length;
+  const totalInscrits=passes.reduce((s,e)=>s+(parseInt(e.inscrits)||0),0);
+  const totalPresents=passes.reduce((s,e)=>s+(parseInt(e.presents)||0),0);
+  const txPresence=totalInscrits>0?Math.round(totalPresents/totalInscrits*100):0;
+  const annules=entries.filter(e=>e.statut==='Annulé').length;
+
+  // Par commune
+  const byCommune={};passes.forEach(e=>{byCommune[e.commune]=(byCommune[e.commune]||0)+1;});
+  const dataCommune=Object.entries(byCommune).sort((a,b)=>b[1]-a[1]).map(([label,value])=>({label,value}));
+
+  // Par type de public — avec tooltip inscrits/présents
+  const byPublic={};
+  passes.forEach(e=>{
+    const p=e.public||'Autres';
+    if(!byPublic[p]) byPublic[p]={value:0,inscrits:0,presents:0};
+    byPublic[p].value++;
+    byPublic[p].inscrits+=(parseInt(e.inscrits)||0);
+    byPublic[p].presents+=(parseInt(e.presents)||0);
+  });
+  const dataPublic=Object.entries(byPublic).sort((a,b)=>b[1].value-a[1].value)
+    .map(([label,d])=>({label,value:d.value,tip:`${label} : ${d.value} atelier(s) — ${d.inscrits} inscrits / ${d.presents} présents`}));
+
+  // Mois courant pour filtrer les mois révolus
+  const todayYM = new Date().toISOString().slice(0,7);
+  // Format YYYY-MM → MM-YYYY pour les labels
+  const fmtML = ym => ym==='?'?'?' : `${ym.slice(5,7)}-${ym.slice(0,4)}`;
+
+  // Ateliers par mois révolus uniquement — tooltip réalisés vs annulés
+  const byMois={};
+  entries.forEach(e=>{
+    const m=e.date?e.date.slice(0,7):'?';
+    if(m>='2000'&&m<todayYM){
+      if(!byMois[m]) byMois[m]={realises:0,annules:0};
+      if(e.statut==='Réalisé') byMois[m].realises++;
+      if(e.statut==='Annulé') byMois[m].annules++;
+    }
+  });
+  const dataMois=Object.keys(byMois).sort().map(k=>({
+    label:fmtML(k),value:byMois[k].realises+byMois[k].annules,
+    tip:`${fmtML(k)} : ${byMois[k].realises} réalisé(s) / ${byMois[k].annules} annulé(s)`
+  }));
+
+  // Présents par mois révolus
+  const byMoisPresents={};
+  passes.forEach(e=>{
+    const m=e.date?e.date.slice(0,7):'?';
+    if(m<todayYM) byMoisPresents[m]=(byMoisPresents[m]||0)+(parseInt(e.presents)||0);
+  });
+  const dataMoisPresents=Object.keys(byMoisPresents).sort().map(k=>({
+    label:fmtML(k),value:byMoisPresents[k],tip:`${fmtML(k)} : ${byMoisPresents[k]} présent(s)`
+  }));
+
+  // Ateliers planifiés — mois à venir (>= mois courant)
+  const byFutur={};
+  entries.filter(e=>e.statut==='Planifié'&&e.date&&e.date.slice(0,7)>=todayYM)
+    .forEach(e=>{const m=e.date.slice(0,7);byFutur[m]=(byFutur[m]||0)+1;});
+  const dataFutur=Object.keys(byFutur).sort().map(k=>({
+    label:fmtML(k),value:byFutur[k],tip:`${fmtML(k)} : ${byFutur[k]} atelier(s) planifié(s)`
+  }));
+
+  // Par statut
+  const byStat={};entries.forEach(e=>{byStat[e.statut]=(byStat[e.statut]||0)+1;});
+  const dataStat=Object.entries(byStat).map(([label,value])=>({label,value}));
+
+  if(passes.length===0) return CE('div',{className:'card'},CE('p',{style:{color:'#718096',textAlign:'center',padding:'40px 0'}},'Aucun atelier réalisé.'));
+  return CE('div',null,
+    CE('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:8}},
+      CE('button',{className:'btn btn-print btn-sm',onClick:()=>window.print()},'🖨️ Imprimer')
+    ),
+    CE('div',{className:'kpi-grid'},
+      CE('div',{className:'kpi'},CE('div',{className:'val'},total),CE('div',{className:'lbl'},'Ateliers réalisés')),
+      CE('div',{className:'kpi'},CE('div',{className:'val'},annules),CE('div',{className:'lbl'},'Annulés')),
+      CE('div',{className:'kpi'},CE('div',{className:'val'},totalPresents),CE('div',{className:'lbl'},'Participants présents')),
+      CE('div',{className:'kpi'},CE('div',{className:'val'},txPresence+'%'),CE('div',{className:'lbl'},'Taux de présence'))
+    ),
+    CE('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}},
+      CE('div',{className:'card'},CE('h2',null,'Par commune'),CE(BarChart,{data:dataCommune,colors:['#1e3a8a','#3b82f6','#60a5fa','#93c5fd','#1e40af','#2563eb','#1d4ed8','#1e3a8a']})),
+      CE('div',{className:'card'},CE('h2',null,'Par type de public'),CE(BarChart,{data:dataPublic,colors:['#7C3AED','#2563EB','#059669','#DB2777','#d97706','#0891b2','#65a30d','#dc2626']})),
+      CE('div',{className:'card'},CE('h2',null,'Ateliers par mois (révolus)'),CE(LineChart,{data:dataMois})),
+      CE('div',{className:'card'},CE('h2',null,'Présents par mois (révolus)'),CE(LineChart,{data:dataMoisPresents})),
+      CE('div',{className:'card'},CE('h2',null,'Par statut'),CE(DonutChart,{data:dataStat,colors:['#276749','#2a69ac','#9b2c2c','#718096','#744210'],size:280})),
+      CE('div',{className:'card'},CE('h2',null,'📅 Planifiés — mois à venir'),CE(BarChart,{data:dataFutur,colors:['#7c3aed','#8b5cf6','#a78bfa','#c4b5fd']}))
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// VUE CARTE
+// ═══════════════════════════════════════════════════════════
+function VueCarte({entries,active}) {
+  const mapRef=React.useRef(null);
+  React.useEffect(()=>{
+    if(!active||mapRef.current) return;
+    mapRef.current=L.map('map-container').setView([44.35,0.52],9);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {attribution:'© OpenStreetMap contributors © CARTO',maxZoom:18}).addTo(mapRef.current);
+    const byC={};
+    entries.forEach(e=>{
+      if(!byC[e.commune]) byC[e.commune]={total:0,realises:0,planifies:0,presents:0};
+      byC[e.commune].total++;
+      if(e.statut==='Réalisé'){ byC[e.commune].realises++; byC[e.commune].presents+=(parseInt(e.presents)||0); }
+      if(e.statut==='Planifié') byC[e.commune].planifies++;
+    });
+    function markerColor(pct){
+      if(pct>=70) return {fill:'#22c55e',stroke:'#166534'};
+      if(pct>=40) return {fill:'#f97316',stroke:'#9a3412'};
+      return {fill:'#3b82f6',stroke:'#1d4ed8'};
+    }
+    Object.entries(byC).forEach(([c,s])=>{
+      const g=COMMUNES_GPS[c];if(!g)return;
+      const pct=s.total>0?Math.round(s.realises/s.total*100):0;
+      const mc=markerColor(pct);
+      const popup=`<div style="min-width:165px;font-family:'Segoe UI',sans-serif;font-size:13px">
+        <strong style="font-size:14px;color:#1e3a8a">${c}</strong>
+        <div style="margin:6px 0 4px;color:#4a5568">Total : ${s.total}</div>
+        <div style="color:#276749;font-weight:600">Réalisés : ${s.realises}</div>
+        <div style="color:#2a69ac;font-weight:600">Planifiés : ${s.planifies}</div>
+        <div style="color:#4a5568">Présents : ${s.presents}</div>
+        <div style="background:#e2e8f0;border-radius:4px;height:6px;margin-top:8px;overflow:hidden">
+          <div style="background:#059669;width:${Math.max(2,pct)}%;height:100%;border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:#718096;margin-top:3px">${pct}% réalisé</div>
+      </div>`;
+      L.circleMarker([g.lat,g.lng],{radius:Math.min(8+s.total*0.8,26),
+        fillColor:mc.fill,color:mc.stroke,weight:2,opacity:1,fillOpacity:.82})
+       .addTo(mapRef.current)
+       .bindPopup(popup,{maxWidth:220});
+    });
+  },[active]);
+  return CE('div',null,
+    CE('div',{style:{display:'flex',justifyContent:'flex-end',marginBottom:8}},
+      CE('button',{className:'btn btn-print btn-sm',onClick:()=>window.print()},'🖨️ Imprimer')
+    ),
+    CE('div',{className:'card'},
+      CE('h2',null,'🗺️ Carte des communes'),
+      CE('div',{style:{display:'flex',gap:16,marginBottom:10,flexWrap:'wrap',fontSize:12,color:'#4a5568'}},
+        CE('span',null,CE('span',{style:{display:'inline-block',width:12,height:12,borderRadius:'50%',background:'#22c55e',marginRight:5,verticalAlign:'middle'}}),'≥ 70% réalisés'),
+        CE('span',null,CE('span',{style:{display:'inline-block',width:12,height:12,borderRadius:'50%',background:'#f97316',marginRight:5,verticalAlign:'middle'}}),'40 – 70%'),
+        CE('span',null,CE('span',{style:{display:'inline-block',width:12,height:12,borderRadius:'50%',background:'#3b82f6',marginRight:5,verticalAlign:'middle'}}),'< 40%')
+      ),
+      CE('div',{id:'map-container'})
+    )
+  );
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// VUE BINGO
+// ═══════════════════════════════════════════════════════════
+function VueBingo({entries}) {
+  const [selected, setSelected] = React.useState(null);
+
+  const communes = React.useMemo(()=>{
+    const byC={};
+    entries.forEach(e=>{
+      const c=e.commune||'Inconnue';
+      if(!byC[c]) byC[c]={total:0,realises:0,annules:0,ateliers:[]};
+      byC[c].total++;
+      if(e.statut==='Réalisé') byC[c].realises++;
+      if(e.statut==='Annulé') byC[c].annules++;
+      byC[c].ateliers.push(e);
+    });
+    return Object.entries(byC)
+      .sort((a,b)=>b[1].total-a[1].total)
+      .map(([nom,d])=>({nom,total:d.total,realises:d.realises,annules:d.annules,
+        pct:d.total>0?Math.round(d.realises/d.total*100):0,
+        ateliers:[...d.ateliers].sort((a,b)=>a.date>b.date?1:-1)}));
+  },[entries]);
+
+  function getCircleColor(pct){
+    if(pct>=70) return {stroke:'#22c55e',text:'#166534',bg:'#dcfce7'};
+    if(pct>=40) return {stroke:'#f97316',text:'#9a3412',bg:'#ffedd5'};
+    return {stroke:'#3b82f6',text:'#1d4ed8',bg:'#dbeafe'};
+  }
+
+  const BADGE_COLORS={'Réalisé':'#dcfce7','Annulé':'#fee2e2','Planifié':'#dbeafe','Reporté':'#fef3c7','Non réalisé':'#f1f5f9'};
+  const BADGE_TEXT={'Réalisé':'#166534','Annulé':'#991b1b','Planifié':'#1d4ed8','Reporté':'#92400e','Non réalisé':'#475569'};
+  const BORDER_C={'Réalisé':'#22c55e','Annulé':'#ef4444','Planifié':'#3b82f6','Reporté':'#f59e0b','Non réalisé':'#94a3b8'};
+
+  const sel = selected ? communes.find(c=>c.nom===selected) : null;
+
+  return CE('div',null,
+    CE('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+      CE('div',{style:{fontSize:13,color:'#718096'}},
+        CE('span',{style:{marginRight:16}},
+          CE('span',{style:{display:'inline-block',width:10,height:10,borderRadius:'50%',background:'#22c55e',border:'2px solid #22c55e',marginRight:4}}),
+          '≥70% réalisés'
+        ),
+        CE('span',{style:{marginRight:16}},
+          CE('span',{style:{display:'inline-block',width:10,height:10,borderRadius:'50%',background:'#ffedd5',border:'2px solid #f97316',marginRight:4}}),
+          '40-70%'
+        ),
+        CE('span',null,
+          CE('span',{style:{display:'inline-block',width:10,height:10,borderRadius:'50%',background:'#dbeafe',border:'2px solid #3b82f6',marginRight:4}}),
+          '<40%'
+        )
+      ),
+      CE('button',{className:'btn btn-print btn-sm',onClick:()=>window.print()},'🖨️ Imprimer')
+    ),
+    CE('div',{className:'bingo-grid'},
+      communes.map(c=>{
+        const col=getCircleColor(c.pct);
+        return CE('div',{
+          key:c.nom,
+          className:'bingo-card'+(selected===c.nom?' selected':''),
+          onClick:()=>setSelected(selected===c.nom?null:c.nom)
+        },
+          CE('div',{className:'bingo-circle',style:{background:col.bg,borderColor:col.stroke,color:col.text}},c.total),
+          CE('div',{className:'bingo-nom'},c.nom),
+          CE('div',{className:'bingo-pct'},c.pct+'% réalisés')
+        );
+      })
+    ),
+    sel && CE('div',{className:'card'},
+      CE('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
+        CE('h2',{style:{borderBottom:'none',marginBottom:0,paddingBottom:0}},
+          CE('span',{style:{color:'#1e3a8a'}},'📍 '+sel.nom),
+          CE('span',{style:{fontSize:13,fontWeight:400,color:'#718096',marginLeft:8}},'— '+sel.total+' atelier(s)')
+        ),
+        CE('button',{onClick:()=>setSelected(null),style:{background:'none',border:'none',fontSize:18,cursor:'pointer',color:'#718096'}},'✕')
+      ),
+      CE('div',{className:'bingo-list'},
+        sel.ateliers.map((e,i)=>{
+          const border=BORDER_C[e.statut]||'#94a3b8';
+          return CE('div',{key:i,className:'bingo-list-item'},
+            CE('span',{className:'bingo-dot',style:{background:border}}),
+            CE('span',{className:'bingo-list-date'},fmtDate(e.date)),
+            CE('span',{className:'bingo-list-theme'},e.thematique),
+            CE('span',{className:'bingo-list-badge',style:{background:BADGE_COLORS[e.statut]||'#f1f5f9',color:BADGE_TEXT[e.statut]||'#475569'}},e.statut)
+          );
+        })
+      )
+    )
+  );
+}
+// ═══════════════════════════════════════════════════════════
+// VUE ADMIN
+// ═══════════════════════════════════════════════════════════
+function VueAdmin({entries, onRefresh, addLog}) {
+  const [resetStep,setResetStep] = React.useState(0);
+  const [visibility, setVisibility] = React.useState(null);
+  const [visSaving, setVisSaving] = React.useState(false);
+
+  const VIS_ITEMS = [
+    {key:'saisie',     label:String.fromCodePoint(0x270F)+' Saisie',     sub:'Formulaire de saisie'},
+    {key:'historique', label:String.fromCodePoint(0x1F4CB)+' Historique', sub:'Liste des ateliers'},
+    {key:'graphiques', label:String.fromCodePoint(0x1F4CA)+' Graphiques', sub:'Tableaux de bord'},
+    {key:'carte',      label:String.fromCodePoint(0x1F5FA)+' Carte',      sub:'Carte des communes'},
+    {key:'bingo',      label:String.fromCodePoint(0x1F3AF)+' Bingo',      sub:'Jeu Bingo'},
+  ];
+
+  React.useEffect(()=>{
+    apiFetch('getVisibility').then(res=>{ if(res.ok) setVisibility(res.visibility); }).catch(()=>{});
+  },[]);
+
+  async function handleSaveVisibility(){
+    setVisSaving(true);
+    try {
+      const res = await apiFetch('saveVisibility', {visibility: JSON.stringify(visibility)});
+      if(res.ok){ showToast('Visibilite sauvegardee'); addLog('Visibilite frontend mise a jour','ok'); }
+      else throw new Error(res.error);
+    } catch(err){ showToast('Erreur : '+err.message, false); }
+    finally { setVisSaving(false); }
+  }
+
+  function toggleVis(key){ setVisibility(v=>({...v,[key]:!v[key]})); }
+  const [importing,setImporting] = React.useState(false);
+  const [importProgress,setImportProgress] = React.useState(0);
+  const [importMsg,setImportMsg] = React.useState('');
+
+  // ── Réinitialisation ──
+  function handleReset() {
+    if(resetStep===0){ setResetStep(1); return; }
+    if(resetStep===1){ setResetStep(2); return; }
+    // Étape 3 : exécution
+    addLog('Réinitialisation BDD locale demandée','info');
+    showToast('✅ BDD locale vidée (Google Sheet intact)');
+    setResetStep(0);
+    onRefresh();
+  }
+
+  // ── Import CSV ──
+  async function handleImportCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value='';
+    setImporting(true); setImportProgress(0); setImportMsg('Lecture du fichier…');
+
+    try {
+      const text = await file.text();
+      const lines = text.split('\n').filter(l=>l.trim());
+      if (lines.length < 2) throw new Error('Fichier vide ou invalide');
+
+      // Détecter le séparateur (virgule ou point-virgule)
+      const firstLine = lines[0];
+      const sep = (firstLine.split(';').length > firstLine.split(',').length) ? ';' : ',';
+
+      function parseCSVLine(line) {
+        const res=[]; let cur='', inQ=false;
+        for(let i=0;i<line.length;i++){
+          const c=line[i];
+          if(c==='"') inQ=!inQ;
+          else if(c===sep&&!inQ){ res.push(cur.trim()); cur=''; }
+          else cur+=c;
+        }
+        res.push(cur.trim()); return res;
+      }
+
+      const headers = parseCSVLine(lines[0]).map(h=>h.replace(/^"|"$/g,'').trim());
+      const entries_raw = [];
+
+      for(let i=1;i<lines.length;i++){
+        const vals = parseCSVLine(lines[i]);
+        if(vals.length < 3) continue;
+        const row={};
+        headers.forEach((h,idx)=>{ row[h]=vals[idx]?vals[idx].replace(/^"|"$/g,'').trim():''; });
+        if(!row._id && !row.statut) continue;
+
+        const entry = {
+          _id: row._id || genId(),
+          _n: parseInt(row._n)||0,
+          statut: row.statut||'Planifié',
+          date: normalizeDate(row.date),
+          horaire: normalizeHoraire(row.horaire),
+          ampm: row.ampm||'AM',
+          orienteur: row.orienteur||'',
+          commune: normalizeCommune(row.commune),
+          lieu: row.lieu||'',
+          thematique: row.thematique||'',
+          inscrits: row.inscrits===''?'':parseInt(row.inscrits)||0,
+          presents: row.presents===''?'':parseInt(row.presents)||0,
+          public: row.pub||row.public||'Tous publics',
+          conseiller: row.conseiller||'',
+          materiel: MATERIELS.filter(m=>row[m]==='OUI'),
+          residence: row.residence||'',
+          remarques: row.remarques||''
+        };
+        entries_raw.push(entry);
+      }
+
+      setImportMsg(`${entries_raw.length} lignes parsées — envoi vers Google Sheets…`);
+
+      // Envoyer par lots de 20 via GET (contourne CORS depuis file://)
+      const BATCH = 5;
+      let done = 0;
+      for (let i = 0; i < entries_raw.length; i += BATCH) {
+        const batch = entries_raw.slice(i, i + BATCH);
+        const params = new URLSearchParams({
+          action: 'saveMany',
+          entries: JSON.stringify(batch)
+        });
+        const res = await Promise.race([
+          fetch(`${GS_URL}?${params.toString()}`),
+          new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),45000))
+        ]);
+        const data = await res.json();
+        if(!data.ok) throw new Error(data.error);
+        done += batch.length;
+        setImportProgress(Math.round(done/entries_raw.length*100));
+        setImportMsg(`${done}/${entries_raw.length} lignes importées…`);
+      }
+
+      addLog(`Import CSV : ${entries_raw.length} ateliers importés`,'ok');
+      showToast(`✅ ${entries_raw.length} ateliers importés`);
+      onRefresh();
+    } catch(err) {
+      addLog('Erreur import : '+err.message,'err');
+      showToast('❌ Erreur import : '+err.message, false);
+    } finally {
+      setImporting(false); setImportProgress(0); setImportMsg('');
+    }
+  }
+
+  // ── Import XLSX ──
+  async function handleImportXLSX(e) {
+    const file = e.target.files[0];
+    if(!file) return;
+    e.target.value='';
+    setImporting(true); setImportProgress(0); setImportMsg('Lecture du fichier Excel…');
+    try {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws,{defval:''});
+
+      const entries_raw = rows.map(row=>({
+        _id: row._id||genId(),
+        _n: parseInt(row._n)||0,
+        statut: row.statut||'Planifié',
+        date: normalizeDate(row.date),
+        horaire: normalizeHoraire(row.horaire),
+        ampm: row.ampm||'AM',
+        orienteur: row.orienteur||'',
+        commune: normalizeCommune(row.commune),
+        lieu: row.lieu||'',
+        thematique: row.thematique||'',
+        inscrits: row.inscrits===''?'':parseInt(row.inscrits)||0,
+        presents: row.presents===''?'':parseInt(row.presents)||0,
+        public: row.pub||row.public||'Tous publics',
+        conseiller: row.conseiller||'',
+        materiel: MATERIELS.filter(m=>row[m]==='OUI'||(Array.isArray(row.materiel)&&row.materiel.includes(m))),
+        residence: row.residence||'',
+        remarques: row.remarques||''
+      })).filter(e=>e._id&&e.statut);
+
+      const BATCH=50; let done=0;
+      for(let i=0;i<entries_raw.length;i+=BATCH){
+        const batch=entries_raw.slice(i,i+BATCH);
+        const res=await apiFetch('saveMany',{entries:batch});
+        if(!res.ok) throw new Error(res.error);
+        done+=batch.length;
+        setImportProgress(Math.round(done/entries_raw.length*100));
+        setImportMsg(`${done}/${entries_raw.length} lignes importées…`);
+      }
+
+      addLog(`Import XLSX : ${entries_raw.length} ateliers importés`,'ok');
+      showToast(`✅ ${entries_raw.length} ateliers importés`);
+      onRefresh();
+    } catch(err){
+      addLog('Erreur import XLSX : '+err.message,'err');
+      showToast('❌ '+err.message,false);
+    } finally { setImporting(false); setImportProgress(0); setImportMsg(''); }
+  }
+
+  const resetLabels=['🗑️ Réinitialiser la BDD locale','⚠️ Confirmer (1/2)','🚨 Confirmer définitivement (2/2)'];
+
+  return CE('div',null,
+    CE('div',{className:'card'},
+      CE('h2',null,'⚙️ Panneau Administrateur'),
+      CE('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16,marginBottom:8}},
+        CE('div',{className:'kpi'},CE('div',{className:'val'},entries.length),CE('div',{className:'lbl'},'Total ateliers')),
+        CE('div',{className:'kpi'},CE('div',{className:'val'},entries.filter(e=>e.statut==='Réalisé').length),CE('div',{className:'lbl'},'Réalisés'))
+      )
+    ),
+
+    CE('div',{className:'admin-section'},
+      CE('h3',null,'📥 Import CSV (migration depuis fichier existant)'),
+      CE('p',{style:{fontSize:12,color:'#4a5568',marginBottom:12}},
+        'Importe le fichier Ateliers_TEST.csv ou tout export CSV compatible. Les entrées existantes sont fusionnées (pas écrasées).'),
+      importing
+        ? CE('div',null,
+            CE('p',{style:{fontSize:12,color:'#4a5568',marginBottom:6}},importMsg),
+            CE('div',{className:'progress-bar'},CE('div',{className:'progress-fill',style:{width:importProgress+'%'}})),
+            CE('p',{style:{fontSize:11,color:'#718096',marginTop:4}},importProgress+'%')
+          )
+        : CE('label',{style:{display:'inline-block',cursor:'pointer'}},
+            CE('span',{className:'btn btn-primary'},'📂 Choisir un fichier CSV'),
+            CE('input',{type:'file',accept:'.csv',style:{display:'none'},onChange:handleImportCSV})
+          )
+    ),
+
+    CE('div',{className:'admin-section'},
+      CE('h3',null,'📊 Import XLSX (fichier exporté depuis cette app)'),
+      CE('p',{style:{fontSize:12,color:'#4a5568',marginBottom:12}},
+        'Réimporte un fichier .xlsx précédemment exporté depuis l\'historique.'),
+      importing
+        ? CE('div',null,CE('p',{style:{fontSize:12,color:'#4a5568'}},importMsg))
+        : CE('label',{style:{display:'inline-block',cursor:'pointer'}},
+            CE('span',{className:'btn btn-warn'},'📂 Choisir un fichier XLSX'),
+            CE('input',{type:'file',accept:'.xlsx',style:{display:'none'},onChange:handleImportXLSX})
+          )
+    ),
+
+    CE('div',{className:'admin-section'},
+      CE('h3',null,'Visibilite du Frontend'),
+      CE('p',{style:{fontSize:12,color:'#4a5568',marginBottom:14}},
+        'Activez ou desactivez les rubriques du frontend. Sauvegardez pour appliquer.'),
+      visibility===null
+        ? CE('div',{style:{color:'#718096',fontSize:13}},'Chargement...')
+        : CE('div',null,
+            VIS_ITEMS.map(item=>
+              CE('div',{key:item.key,className:'toggle-row'},
+                CE('div',null,
+                  CE('div',{className:'toggle-label'},item.label),
+                  CE('div',{className:'toggle-sub'},item.sub)
+                ),
+                CE('label',{className:'tgl'},
+                  CE('input',{type:'checkbox',checked:!!visibility[item.key],onChange:()=>toggleVis(item.key)}),
+                  CE('div',{className:'tgl-track'})
+                )
+              )
+            ),
+            CE('button',{
+              className:'btn btn-primary',
+              style:{marginTop:16},
+              onClick:handleSaveVisibility,
+              disabled:visSaving
+            }, visSaving ? 'Sauvegarde...' : 'Sauvegarder la visibilite')
+          )
+    ),
+
+    CE('div',{className:'admin-section'},
+      CE('h3',null,'🗑️ Réinitialiser la base de données'),
+      CE('p',{style:{fontSize:12,color:'#4a5568',marginBottom:12}},
+        'Vide uniquement le cache local. Le Google Sheet reste intact. Utile pour forcer un rechargement complet.'),
+      resetStep>0&&CE('div',{className:'confirm-box'},
+        CE('p',null,resetStep===1?'Êtes-vous sûr ? Cette action vide le cache local.':'Dernière confirmation — cliquez pour confirmer.')),
+      CE('div',{style:{display:'flex',gap:10}},
+        CE('button',{className:'btn btn-danger',onClick:handleReset},resetLabels[resetStep]),
+        resetStep>0&&CE('button',{className:'btn btn-secondary',onClick:()=>setResetStep(0)},'Annuler')
+      )
+    )
+  );
+}
+
+// ═══════════════════════════════════════════════════════════
+// APP PRINCIPALE
+// ═══════════════════════════════════════════════════════════
+function App() {
+  const [auth,setAuth] = React.useState(true);
+  const [view,setView] = React.useState('historique');
+  const [editingId,setEditingId] = React.useState(null);
+  const [entries,setEntries] = React.useState([]);
+  const [loading,setLoading] = React.useState(true);
+  const [error,setError] = React.useState(null);
+  const [logs,setLogs] = React.useState([]);
+  const [newEntries,setNewEntries] = React.useState([]);
+  const [seenIds,setSeenIds] = React.useState(new Set());
+  const [showListes, setShowListes] = React.useState(false);
+  const [lists, setLists] = React.useState({
+    statuts:    [...STATUTS_DEFAULT],
+    conseillers:[...CONSEILLERS_DEFAULT],
+    publics:    [...PUBLICS_DEFAULT],
+    materiels:  [...MATERIELS_DEFAULT],
+  });
+
+  function addLog(msg,type='info'){
+    const t=new Date().toLocaleTimeString('fr-FR');
+    setLogs(l=>[{msg,type,t},...l].slice(0,50));
+  }
+
+  async function loadData(attempt=1){
+    setLoading(true); setError(null);
+    try {
+      const res=await Promise.race([
+        fetch(`${GS_URL}?action=getAll`),
+        new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),25000))
+      ]);
+      const data=await res.json();
+      if(!data.ok) throw new Error(data.error||'Erreur serveur');
+      const incoming = data.entries||[];
+      setEntries(incoming);
+      // ── Hydrater les listes depuis GAS (v8.2) ──────────────
+      if (data.lists) {
+        const l = data.lists;
+        setLists({
+          statuts:    Array.isArray(l.statuts)     ? l.statuts     : [...STATUTS_DEFAULT],
+          conseillers:Array.isArray(l.conseillers) ? l.conseillers : [...CONSEILLERS_DEFAULT],
+          publics:    Array.isArray(l.publics)     ? l.publics     : [...PUBLICS_DEFAULT],
+          materiels:  Array.isArray(l.materiels)   ? l.materiels   : [...MATERIELS_DEFAULT],
+        });
+        // Mettre à jour les globals rétrocompat utilisés dans STATUTS/CONSEILLERS
+        STATUTS     = Array.isArray(l.statuts)     ? [...l.statuts]     : [...STATUTS_DEFAULT];
+        CONSEILLERS = Array.isArray(l.conseillers) ? [...l.conseillers] : [...CONSEILLERS_DEFAULT];
+        PUBLICS     = Array.isArray(l.publics)     ? [...l.publics]     : [...PUBLICS_DEFAULT];
+        MATERIELS   = Array.isArray(l.materiels)   ? [...l.materiels]   : [...MATERIELS_DEFAULT];
+        addLog('Listes synchronisées depuis Google Sheets','ok');
+      }
+      addLog(`${incoming.length} ateliers chargés`,'ok');
+      // Détecter les nouveaux enregistrements
+      setSeenIds(prev => {
+        if(prev.size === 0) {
+          // Premier chargement — tout marquer comme vu
+          return new Set(incoming.map(e=>e._id));
+        }
+        const nouvs = incoming.filter(e=>!prev.has(e._id));
+        if(nouvs.length > 0) setNewEntries(n=>[...nouvs,...n]);
+        return new Set(incoming.map(e=>e._id));
+      });
+      setLoading(false);
+    } catch(err){
+      if(err.message==='timeout'&&attempt<3){
+        addLog(`Tentative ${attempt}/3, nouvel essai…`,'info');
+        setTimeout(()=>loadData(attempt+1),2000);
+      } else {
+        setError(attempt>1?'Google Sheets ne répond pas après 3 tentatives.':'Impossible de charger : '+err.message);
+        addLog('Erreur chargement : '+err.message,'err');
+        setLoading(false);
+      }
+    }
+  }
+
+  React.useEffect(()=>{ loadData(); loadCommunes47().catch(()=>{}); },[]);
+
+  async function handleDelete(id){
+    try {
+      const res=await apiFetch('delete',{_id:id});
+      if(!res.ok) throw new Error(res.error);
+      showToast('✅ Atelier supprimé');
+      addLog('Suppression atelier '+id,'ok');
+      loadData();
+    } catch(err){ showToast('❌ '+err.message,false); }
+  }
+
+  function handleEdit(id){ setEditingId(id); setView('saisie'); }
+
+  if(!auth) return CE(Login,{onLogin:()=>setAuth(true)});
+
+  const nav=(v,label)=>CE('button',{className:view===v?'active':'',onClick:()=>setView(v)},label);
+
+  return CE('div',null,
+    CE('nav',null,
+      CE('span',{className:'logo'},'🖥️ Ateliers de l\'Inclusion Numérique du CD47',CE('span',{style:{background:'rgba(255,255,255,.18)',borderRadius:10,padding:'1px 7px',fontSize:12,fontWeight:700,marginLeft:8,verticalAlign:'middle'}},entries.length)),
+      CE('span',{className:'admin-badge'},'ADMIN'),
+      nav('saisie','✏️ Saisie'),
+      nav('historique','📋 Historique'),
+      nav('graphiques','📊 Graphiques'),
+      nav('carte','🗺️ Carte'),
+      nav('domino','🎯 Bingo'),
+      nav('admin','⚙️ Admin'),
+      nav('logs','📋 Logs'),
+      CE('button',{
+        className: view==='listes'?'active':'',
+        style:{background:'rgba(255,255,255,.12)',borderColor:'rgba(255,255,255,.3)',border:'1px solid',marginLeft:8},
+        onClick:()=>setShowListes(true)
+      },'📋 Listes'),
+      newEntries.length>0&&CE('button',{
+        className:'notif',
+        onClick:()=>{ setView('historique'); window._filterNewEntries&&window._filterNewEntries(newEntries.map(e=>e._id)); setNewEntries([]); }
+      },'🔔 Nouveaux ',CE('span',{className:'notif-badge'},newEntries.length))
+    ),
+    CE('div',{className:'main'},
+      loading&&CE('div',{className:'loading-full'},
+        CE('div',{className:'big-spin'}),CE('span',null,'Chargement…')),
+      error&&CE('div',{className:'error-box'},
+        CE('strong',null,'❌ Impossible de charger les données'),
+        CE('span',null,error),
+        CE('button',{className:'btn btn-primary',onClick:loadData},'🔄 Réessayer')),
+      !loading&&!error&&CE('div',null,
+        view==='saisie'     &&CE(VueSaisie,    {entries,onSaved:loadData,onNewEntry:e=>{setNewEntries(n=>[e,...n]);setSeenIds(s=>{const ns=new Set(s);ns.add(e._id);return ns;});},lists,editingId,onClearEdit:()=>setEditingId(null)}),
+        view==='historique' &&CE(VueHistorique,{entries,onEdit:handleEdit,onDelete:handleDelete,onRefresh:loadData}),
+        view==='graphiques' &&CE(VueGraphiques,{entries}),
+        view==='carte'      &&CE(VueCarte,     {entries,active:view==='carte'}),
+        view==='domino'     &&CE(VueBingo,    {entries}),
+        view==='admin'      &&CE(VueAdmin,     {entries,onRefresh:loadData,addLog}),
+        view==='logs'       &&CE('div',{className:'card'},
+          CE('h2',null,'📋 Journal des opérations'),
+          logs.length===0
+            ?CE('p',{style:{color:'#718096',fontSize:13}},'Aucune opération enregistrée.')
+            :logs.map((l,i)=>CE('div',{key:i,className:`log-entry log-${l.type}`},
+              CE('span',{className:'log-time'},l.t),
+              CE('span',null,l.msg)
+            ))
+        )
+      )
+    ),
+    showListes&&CE(VueListes,{
+      lists,
+      onSave:newLists=>{
+        setLists(newLists);
+        // Mettre à jour les globals rétrocompat
+        STATUTS     = Array.isArray(newLists.statuts)     ? [...newLists.statuts]     : STATUTS;
+        CONSEILLERS = Array.isArray(newLists.conseillers) ? [...newLists.conseillers] : CONSEILLERS;
+        PUBLICS     = Array.isArray(newLists.publics)     ? [...newLists.publics]     : PUBLICS;
+        MATERIELS   = Array.isArray(newLists.materiels)   ? [...newLists.materiels]   : MATERIELS;
+      },
+      onClose:()=>setShowListes(false)
+    }),
+    CE('div',{id:'toast',className:'toast',style:{opacity:0}})
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(CE(App));
+</script>
+</body>
+</html>
