@@ -214,7 +214,7 @@ tr:hover td{background:#f7fafc}
 <div id="root"></div>
 <script>
 const GS_URL = 'https://script.google.com/macros/s/AKfycbxJm14YFVz861rHnnENPTQoJrsCeChkXokxrq2vKZZBzmLKP6ys8NYuPjN92NIia9QoVA/exec';
-const ADMIN_PWD = 'administrateur';
+const ADMIN_PWD_HASH = '1f2894b9c64af1e9646ce8ae49fe67c74e4267054d1182e2a96ff36a02ba8b08';
 
 const COMMUNES = [
   'AGEN','ARGENTON','ASTAFFORT','CASSENEUIL','CASTELMORON SUR LOT',
@@ -680,8 +680,13 @@ function VueListes({lists, onSave, onClose}) {
 function Login({onLogin}) {
   const [pwd, setPwd] = React.useState('');
   const [err, setErr] = React.useState('');
-  function tryLogin() {
-    if (pwd === ADMIN_PWD) onLogin();
+  async function tryLogin() {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(pwd);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashHex = Array.from(new Uint8Array(hashBuffer))
+      .map(b => b.toString(16).padStart(2,'0')).join('');
+    if (hashHex === ADMIN_PWD_HASH) onLogin();
     else setErr('Mot de passe incorrect');
   }
   return CE('div',{className:'login-wrap'},
